@@ -1,0 +1,1396 @@
+/* ==========================================================================
+   SMART GROCERY & BUDGET SAFETY TRACKER - STYLESHEET
+   Mobile-First PWA Architecture (Max-width 430px centered)
+   Native App Aesthetics, Glassmorphism & High-Contrast Touch Ergonomics
+   ========================================================================== */
+
+:root {
+  --bg-dark: #080d1a;
+  --bg-chassis: #020617;
+  --surface-card: rgba(22, 31, 50, 0.75);
+  --surface-card-hover: rgba(30, 42, 68, 0.85);
+  --surface-elevated: #1a243b;
+  --surface-input: #101827;
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-active: rgba(16, 185, 129, 0.4);
+
+  /* Primary Brand - Emerald Fresh Grocery */
+  --emerald-500: #10b981;
+  --emerald-400: #34d399;
+  --emerald-600: #059669;
+  --emerald-glow: rgba(16, 185, 129, 0.25);
+
+  /* Warning Amber - Budget >= 90% */
+  --amber-500: #f59e0b;
+  --amber-400: #fbbf24;
+  --amber-glow: rgba(245, 158, 11, 0.25);
+
+  /* Danger Red - Over Budget > 100% & Price Up */
+  --rose-500: #f43f5e;
+  --rose-600: #e11d48;
+  --rose-glow: rgba(244, 63, 94, 0.3);
+
+  /* Typography */
+  --font-main: -apple-system, BlinkMacSystemFont, 'Plus Jakarta Sans', 'Inter', 'Segoe UI', Roboto, sans-serif;
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+
+  /* App dimensions */
+  --mobile-max-width: 430px;
+  --bottom-bar-height: 72px;
+  --safe-bottom: env(safe-area-inset-bottom, 16px);
+  --safe-top: env(safe-area-inset-top, 0px);
+  --radius-lg: 20px;
+  --radius-md: 14px;
+  --radius-sm: 8px;
+}
+
+/* Base reset */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  background-color: var(--bg-chassis);
+  color: var(--text-primary);
+  font-family: var(--font-main);
+  font-size: 15px;
+  line-height: 1.5;
+  overflow-x: hidden;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Desktop Presentation Wrapper */
+.desktop-viewport-canvas {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 50% 20%, #172554 0%, #030712 70%);
+  padding: 16px;
+}
+
+/* Smartphone Container Frame (Max 430px) */
+.mobile-device-frame {
+  width: 100%;
+  max-width: var(--mobile-max-width);
+  height: 92vh;
+  max-height: 890px;
+  background-color: var(--bg-dark);
+  border-radius: 44px;
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.8),
+              0 0 0 10px #1e293b,
+              0 0 0 12px #0f172a,
+              0 0 35px rgba(16, 185, 129, 0.15);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+/* On actual mobile screens, remove device bezels and make full viewport */
+@media (max-width: 480px) {
+  .desktop-viewport-canvas {
+    padding: 0;
+    background: var(--bg-dark);
+  }
+  .mobile-device-frame {
+    height: 100vh;
+    max-height: 100vh;
+    border-radius: 0;
+    box-shadow: none;
+    border: none;
+  }
+}
+
+/* Smartphone Status Bar Mockup */
+.mobile-status-bar {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #cbd5e1;
+  background: rgba(8, 13, 26, 0.85);
+  backdrop-filter: blur(10px);
+  z-index: 50;
+  flex-shrink: 0;
+}
+
+.status-time {
+  letter-spacing: -0.2px;
+}
+
+.dynamic-island {
+  width: 90px;
+  height: 20px;
+  background: #000;
+  border-radius: 20px;
+}
+
+.status-icons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* App Scrollable Content Area */
+.app-screen-container {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+  padding-bottom: calc(var(--bottom-bar-height) + 32px);
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+/* Header Sesi Belanja */
+.session-header-card {
+  padding: 16px 18px 12px;
+  background: linear-gradient(180deg, rgba(16, 24, 39, 0.95) 0%, rgba(8, 13, 26, 0.6) 100%);
+  border-bottom: 1px solid var(--border-subtle);
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  backdrop-filter: blur(16px);
+}
+
+.brand-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.brand-badge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand-icon-wrap {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: linear-gradient(135deg, #10b981, #047857);
+  box-shadow: 0 4px 12px var(--emerald-glow);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.brand-icon-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.brand-title h1 {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.brand-subtitle {
+  font-size: 11px;
+  color: var(--emerald-400);
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  text-transform: uppercase;
+}
+
+.session-badge-tag {
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: var(--emerald-400);
+  padding: 4px 8px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Header Session Selectors */
+.session-context-controls {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 8px;
+  background: rgba(15, 23, 42, 0.6);
+  padding: 8px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+}
+
+.control-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.field-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.styled-select-wrap, .styled-date-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.styled-select, .styled-date-input {
+  width: 100%;
+  height: 38px;
+  background: var(--surface-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  padding: 0 10px;
+  font-size: 13px;
+  font-weight: 600;
+  outline: none;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.styled-select:focus, .styled-date-input:focus {
+  border-color: var(--emerald-500);
+  box-shadow: 0 0 0 2px var(--emerald-glow);
+}
+
+.select-arrow {
+  position: absolute;
+  right: 10px;
+  pointer-events: none;
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+/* ==========================================================================
+   SAFETY CAP & BUDGET BANNER COMPONENT (F-05)
+   ========================================================================== */
+.budget-safety-banner {
+  margin: 14px 16px 8px;
+  padding: 16px;
+  border-radius: var(--radius-lg);
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+/* Safe State (< 90%) */
+.budget-safety-banner.status-safe {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(6, 78, 59, 0.3) 100%);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+/* Warning State (>= 90% and <= 100%) */
+.budget-safety-banner.status-warning {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(120, 53, 15, 0.4) 100%);
+  border: 1px solid rgba(245, 158, 11, 0.5);
+  animation: pulseWarning 2.5s infinite;
+}
+
+/* Over Budget State (> 100%) */
+.budget-safety-banner.status-danger {
+  background: linear-gradient(135deg, rgba(244, 63, 94, 0.25) 0%, rgba(136, 19, 55, 0.5) 100%);
+  border: 1.5px solid var(--rose-500);
+  box-shadow: 0 0 30px var(--rose-glow);
+  animation: pulseDanger 1.8s infinite;
+}
+
+@keyframes pulseWarning {
+  0%, 100% { border-color: rgba(245, 158, 11, 0.5); box-shadow: 0 0 10px var(--amber-glow); }
+  50% { border-color: rgba(245, 158, 11, 0.85); box-shadow: 0 0 20px var(--amber-glow); }
+}
+
+@keyframes pulseDanger {
+  0%, 100% { border-color: var(--rose-500); box-shadow: 0 0 15px var(--rose-glow); }
+  50% { border-color: #fda4af; box-shadow: 0 0 30px rgba(244, 63, 94, 0.55); }
+}
+
+.safety-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.safety-label-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.safety-icon-bubble {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+
+.status-safe .safety-icon-bubble { background: rgba(16, 185, 129, 0.2); color: var(--emerald-400); }
+.status-warning .safety-icon-bubble { background: rgba(245, 158, 11, 0.25); color: var(--amber-400); }
+.status-danger .safety-icon-bubble { background: rgba(244, 63, 94, 0.3); color: var(--rose-500); }
+
+.safety-title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+}
+
+.safety-status-pill {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 20px;
+}
+
+.status-safe .safety-status-pill { background: rgba(16, 185, 129, 0.2); color: var(--emerald-400); }
+.status-warning .safety-status-pill { background: rgba(245, 158, 11, 0.3); color: var(--amber-400); }
+.status-danger .safety-status-pill { background: rgba(244, 63, 94, 0.35); color: #fda4af; }
+
+/* Budget Numbers */
+.budget-stat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 10px 0;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-title {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.stat-value {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+
+.stat-limit-btn {
+  font-size: 11px;
+  color: var(--text-muted);
+  cursor: pointer;
+  text-decoration: underline;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+/* Progress Gauge Bar */
+.budget-progress-track {
+  width: 100%;
+  height: 10px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 20px;
+  overflow: hidden;
+  position: relative;
+  margin-top: 6px;
+}
+
+.budget-progress-fill {
+  height: 100%;
+  border-radius: 20px;
+  transition: width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.3s ease;
+}
+
+.status-safe .budget-progress-fill {
+  background: linear-gradient(90deg, #10b981, #34d399);
+}
+
+.status-warning .budget-progress-fill {
+  background: linear-gradient(90deg, #f59e0b, #fbbf24);
+}
+
+.status-danger .budget-progress-fill {
+  background: linear-gradient(90deg, #f43f5e, #fb7185);
+}
+
+.safety-note-text {
+  font-size: 12px;
+  margin-top: 8px;
+  line-height: 1.4;
+  color: #e2e8f0;
+}
+
+/* Smart Cut Advisor Card in Overbudget */
+.smart-cut-box {
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: var(--radius-md);
+  border: 1px dashed rgba(244, 63, 94, 0.5);
+}
+
+.cut-box-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fecdd3;
+  margin-bottom: 6px;
+}
+
+.cut-item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+  font-size: 12px;
+}
+
+.cut-item-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.cut-item-name {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.cut-item-reason {
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+
+.cut-action-btn {
+  background: rgba(244, 63, 94, 0.25);
+  border: 1px solid var(--rose-500);
+  color: #fff;
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cut-action-btn:active {
+  transform: scale(0.95);
+  background: var(--rose-600);
+}
+
+/* ==========================================================================
+   CART & GROCERY ITEMS LIST (F-01, F-02, F-04)
+   ========================================================================== */
+.cart-section {
+  padding: 8px 16px 20px;
+}
+
+.section-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding: 0 4px;
+}
+
+.section-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.item-counter-pill {
+  font-size: 11px;
+  background: var(--surface-elevated);
+  padding: 2px 8px;
+  border-radius: 12px;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+/* Grocery Item Card */
+.grocery-item-card {
+  background: var(--surface-card);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 14px 14px 12px;
+  margin-bottom: 12px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+
+.grocery-item-card:active {
+  background: var(--surface-card-hover);
+}
+
+.item-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.item-title-group {
+  flex: 1;
+}
+
+.item-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.3;
+  margin-bottom: 3px;
+}
+
+.item-tags-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.category-tag {
+  font-size: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-secondary);
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+/* F-04 Realtime Price Comparison Badges */
+.price-comparator-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+}
+
+/* Price UP (Panah Merah Naik) */
+.badge-price-up {
+  background: rgba(244, 63, 94, 0.18);
+  border: 1px solid rgba(244, 63, 94, 0.45);
+  color: #fda4af;
+}
+
+/* Price DOWN (Panah Hijau Turun) */
+.badge-price-down {
+  background: rgba(16, 185, 129, 0.18);
+  border: 1px solid rgba(16, 185, 129, 0.45);
+  color: var(--emerald-400);
+}
+
+/* Price EQUAL (Tanda Setara) */
+.badge-price-equal {
+  background: rgba(59, 130, 246, 0.15);
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  color: #93c5fd;
+}
+
+/* Brand New Item */
+.badge-new {
+  background: rgba(168, 85, 247, 0.15);
+  border: 1px solid rgba(168, 85, 247, 0.35);
+  color: #d8b4fe;
+}
+
+.item-card-mid {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  margin-top: 4px;
+}
+
+.price-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.unit-price-line {
+  font-size: 12px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.original-price-strike {
+  text-decoration: line-through;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.discount-ribbon {
+  background: rgba(245, 158, 11, 0.2);
+  color: var(--amber-400);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.item-subtotal-val {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.4px;
+}
+
+/* Ergonomic Mobile Stepper (Large Touch Targets) */
+.qty-stepper-control {
+  display: flex;
+  align-items: center;
+  background: var(--surface-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.stepper-btn {
+  width: 38px;
+  height: 38px;
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease;
+}
+
+.stepper-btn:active {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.stepper-btn.minus-btn {
+  color: var(--rose-500);
+}
+
+.stepper-btn.plus-btn {
+  color: var(--emerald-400);
+}
+
+.stepper-input {
+  width: 44px;
+  height: 38px;
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  text-align: center;
+  font-size: 15px;
+  font-weight: 700;
+  outline: none;
+}
+
+.item-card-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.history-tooltip-text {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.item-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.card-action-icon {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s;
+}
+
+.card-action-icon:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.card-action-icon.trash:hover {
+  color: var(--rose-500);
+}
+
+/* Empty Trolley State */
+.empty-trolley-box {
+  text-align: center;
+  padding: 40px 20px;
+  background: var(--surface-card);
+  border: 1px dashed var(--border-subtle);
+  border-radius: var(--radius-lg);
+  margin-top: 10px;
+}
+
+.empty-icon-wrap {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.04);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 14px;
+  color: var(--text-muted);
+}
+
+.empty-trolley-box h3 {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.empty-trolley-box p {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+}
+
+/* Quick Add Suggestion Chips for Students */
+.quick-add-section {
+  margin-top: 20px;
+}
+
+.quick-chips-scroll {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 6px 0 10px;
+  scrollbar-width: none;
+}
+
+.quick-chips-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.quick-product-chip {
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 8px 12px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.2s ease;
+}
+
+.quick-product-chip:active {
+  transform: scale(0.96);
+  border-color: var(--emerald-500);
+}
+
+.quick-chip-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.quick-chip-price {
+  font-size: 11px;
+  color: var(--emerald-400);
+  font-weight: 700;
+}
+
+/* ==========================================================================
+   FLOATING ACTION BUTTON & BOTTOM CHECKOUT DOCK
+   ========================================================================== */
+.cart-floating-cta-bar {
+  position: absolute;
+  bottom: calc(var(--bottom-bar-height) + 12px);
+  left: 16px;
+  right: 16px;
+  z-index: 60;
+  display: flex;
+  gap: 10px;
+}
+
+.btn-add-item-fab {
+  flex: 1;
+  height: 52px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border: none;
+  border-radius: 16px;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  box-shadow: 0 10px 25px var(--emerald-glow);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-add-item-fab:active {
+  transform: scale(0.97);
+  box-shadow: 0 4px 15px var(--emerald-glow);
+}
+
+.btn-finish-session {
+  height: 52px;
+  padding: 0 16px;
+  background: var(--surface-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-finish-session:active {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* ==========================================================================
+   BOTTOM NAVIGATION BAR (Item 3: Navigasi Bawah Melayang)
+   ========================================================================== */
+.mobile-bottom-nav {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--bottom-bar-height);
+  background: rgba(10, 15, 29, 0.88);
+  backdrop-filter: blur(20px);
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 0 12px var(--safe-bottom);
+  z-index: 70;
+}
+
+.nav-tab-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 6px 14px;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  flex: 1;
+}
+
+.nav-tab-btn.active {
+  color: var(--emerald-400);
+}
+
+.nav-tab-icon {
+  font-size: 20px;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.nav-tab-btn.active .nav-tab-icon {
+  transform: scale(1.15);
+}
+
+.nav-tab-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+}
+
+.tab-badge {
+  position: absolute;
+  top: 4px;
+  right: calc(50% - 18px);
+  background: var(--emerald-500);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 1px 5px;
+  border-radius: 10px;
+  min-width: 16px;
+  text-align: center;
+}
+
+/* ==========================================================================
+   BOTTOM SHEET MODAL (Ergonomic Mobile Input Form - F-01, F-03, F-04)
+   ========================================================================== */
+.modal-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+.modal-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.bottom-sheet-content {
+  background: #111a2e;
+  border-top-left-radius: 28px;
+  border-top-right-radius: 28px;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 14px 20px calc(var(--safe-bottom) + 20px);
+  max-height: 88vh;
+  overflow-y: auto;
+  transform: translateY(100%);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modal-overlay.open .bottom-sheet-content {
+  transform: translateY(0);
+}
+
+.sheet-handle-bar {
+  width: 44px;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 10px;
+  margin: 0 auto 14px;
+}
+
+.sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.sheet-header h2 {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.4px;
+}
+
+.sheet-close-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: none;
+  color: var(--text-secondary);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+/* Form Groups */
+.form-group {
+  margin-bottom: 14px;
+}
+
+.form-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.form-input-text, .form-input-numeric {
+  width: 100%;
+  height: 48px;
+  background: var(--surface-input);
+  border: 1.5px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 16px;
+  font-weight: 600;
+  padding: 0 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.form-input-numeric {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--emerald-400);
+}
+
+.form-input-text:focus, .form-input-numeric:focus {
+  border-color: var(--emerald-500);
+  box-shadow: 0 0 0 3px var(--emerald-glow);
+}
+
+/* Live Price Comparator preview inside modal */
+.modal-comparator-preview {
+  margin: 8px 0 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+}
+
+/* Category & Unit Pills */
+.pill-selector-row {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 2px 0 6px;
+  scrollbar-width: none;
+}
+
+.pill-selector-row::-webkit-scrollbar {
+  display: none;
+}
+
+.selector-pill {
+  flex-shrink: 0;
+  background: var(--surface-input);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.selector-pill.active {
+  background: rgba(16, 185, 129, 0.2);
+  border-color: var(--emerald-500);
+  color: var(--emerald-400);
+  font-weight: 700;
+}
+
+/* Multi-tier Discount Selector (F-03) */
+.discount-chips-container {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.discount-chip {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.discount-chip.active {
+  background: rgba(245, 158, 11, 0.25);
+  border-color: var(--amber-500);
+  color: var(--amber-400);
+}
+
+.discount-live-calculation-box {
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px dashed rgba(245, 158, 11, 0.4);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  margin-top: 8px;
+  font-size: 12px;
+  color: #fef3c7;
+}
+
+/* Large Submit Button */
+.btn-submit-item {
+  width: 100%;
+  height: 52px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border: none;
+  border-radius: var(--radius-md);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 10px 25px var(--emerald-glow);
+  margin-top: 12px;
+}
+
+.btn-submit-item:active {
+  transform: scale(0.98);
+}
+
+/* ==========================================================================
+   TAB 2: RIWAYAT TOKO & DATABASE MULTI-TOKO (F-06)
+   ========================================================================== */
+.history-view-container {
+  padding: 16px;
+}
+
+.history-search-card {
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 14px;
+  margin-bottom: 16px;
+}
+
+.cross-store-price-table {
+  margin-top: 12px;
+}
+
+.cross-store-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.store-name-tag {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.store-price-tag {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--emerald-400);
+}
+
+.session-history-card {
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 14px;
+  margin-bottom: 12px;
+}
+
+.session-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.session-store-title {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.session-date-label {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.session-numbers-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-top: 8px;
+}
+
+/* ==========================================================================
+   TAB 3: ANGGARAN & SAFETY CAP MANAGER (F-05)
+   ========================================================================== */
+.budget-manager-container {
+  padding: 16px;
+}
+
+.budget-setup-card {
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 18px;
+  margin-bottom: 16px;
+}
+
+.preset-budget-chips {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin: 12px 0;
+}
+
+.preset-budget-btn {
+  background: var(--surface-input);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  border-radius: 8px;
+  padding: 8px 4px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: center;
+}
+
+.preset-budget-btn.active {
+  background: rgba(16, 185, 129, 0.25);
+  border-color: var(--emerald-500);
+  color: var(--emerald-400);
+}
+
+.category-breakdown-list {
+  margin-top: 14px;
+}
+
+.category-bar-item {
+  margin-bottom: 10px;
+}
+
+.category-bar-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.category-bar-track {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.category-bar-fill {
+  height: 100%;
+  background: var(--emerald-400);
+  border-radius: 10px;
+}
+
+/* Desktop Frame Toggle Utility */
+.desktop-controls-floater {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  z-index: 1000;
+  display: flex;
+  gap: 8px;
+}
+
+.btn-frame-toggle {
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #e2e8f0;
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+/* Audio & Toast Alerts */
+.app-toast-alert {
+  position: absolute;
+  top: 60px;
+  left: 20px;
+  right: 20px;
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border-active);
+  color: #fff;
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 200;
+  transform: translateY(-80px);
+  opacity: 0;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.app-toast-alert.show {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+/* PWA Install Banner */
+.pwa-install-prompt {
+  display: none;
+  background: linear-gradient(135deg, #1e293b, #0f172a);
+  border: 1px solid var(--emerald-500);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  margin: 10px 16px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.pwa-install-prompt.active {
+  display: flex;
+}

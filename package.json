@@ -1,0 +1,21 @@
+{
+  "name": "smart-grocery-budget-tracker",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Mobile PWA Smart Grocery & Budget Safety Tracker untuk Siswa Rantau",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "pwa",
+    "mobile-app",
+    "grocery-tracker",
+    "budget-safety-cap",
+    "multi-tier-discount",
+    "price-comparator"
+  ],
+  "author": "Smart Grocery Team",
+  "license": "MIT"
+}
