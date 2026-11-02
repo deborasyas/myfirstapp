@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="id">
 
 <head>
@@ -28,7 +28,7 @@
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
 
   <!-- Stylesheet -->
-  <link rel="stylesheet" href="./css/style.css">
+  <link rel="stylesheet" href="./css/style.css?v=2.0">
 </head>
 
 <body>
@@ -77,7 +77,7 @@
       </div>
 
       <!-- Header Sesi Belanja (Context: Toko & Tanggal) -->
-            <!-- ============================================================== -->
+      <!-- ============================================================== -->
       <!-- 1. HALAMAN LOGIN & REGISTRASI (FIREBASE AUTHENTICATION)        -->
       <!-- ============================================================== -->
       <div id="auth-view" class="auth-view-container" style="display: flex;">
@@ -102,16 +102,22 @@
             </button>
           </div>
 
+          <!-- Judul & Keterangan Mode Dinamis -->
+          <div style="text-align:center; margin-bottom:14px;">
+            <h3 id="auth-heading-title" style="font-size:15px; font-weight:700; color:#e2e8f0; margin:0 0 4px 0;">Masuk ke Akun Anda</h3>
+            <p id="auth-heading-desc" style="font-size:11px; color:#94a3b8; margin:0;">Masukkan username dan kata sandi untuk masuk.</p>
+          </div>
+
           <!-- Alert Pesan Error / Status -->
           <div id="auth-alert" class="auth-alert-banner" style="display: none;"></div>
 
-          <form id="auth-form" autocomplete="on">
+          <form id="auth-form" onsubmit="return false;" autocomplete="on">
             <div class="form-group">
-              <label class="form-label" for="auth-email">
-                <i data-lucide="mail" style="width:12px; height:12px;"></i> Email Pengguna
+              <label class="form-label" for="auth-username">
+                <i data-lucide="user" style="width:12px; height:12px;"></i> Username
               </label>
-              <input type="email" id="auth-email" class="form-input-text"
-                placeholder="nama@email.com" required autocomplete="email">
+              <input type="text" id="auth-username" class="form-input-text"
+                placeholder="Masukkan username" autocomplete="username">
             </div>
 
             <div class="form-group">
@@ -120,35 +126,43 @@
               </label>
               <div class="auth-password-wrapper" style="position: relative;">
                 <input type="password" id="auth-password" class="form-input-text"
-                  placeholder="Minimal 6 karakter" required minlength="6" autocomplete="current-password">
+                  placeholder="Masukkan kata sandi" autocomplete="current-password">
                 <button type="button" id="btn-toggle-auth-pw" class="auth-pw-toggle-btn"
-                  style="position:absolute; right:12px; top:50%; transform:translateY(-50%); background:none; border:none; color:#94a3b8; cursor:pointer; font-size:14px;">
+                  style="position:absolute; right:12px; top:50%; transform:translateY(-50%); background:none; border:none; color:#94a3b8; cursor:pointer; font-size:14px;"
+                  title="Lihat/Sembunyikan Kata Sandi">
                   👁️
                 </button>
               </div>
             </div>
 
-            <button type="submit" id="btn-auth-submit" class="btn-submit-item" style="height:46px; font-size:14px; margin-top:8px;">
+            <button type="button" id="btn-auth-submit" class="btn-submit-item" style="height:46px; font-size:14px; margin-top:8px;">
               <span id="auth-btn-label">Masuk ke Akun</span>
             </button>
+
+            <!-- Tautan Cepat Pindah Mode -->
+            <div style="text-align:center; margin-top:14px; font-size:11px; color:#94a3b8;">
+              <span id="auth-switch-text">Belum punya akun?</span>
+              <button type="button" id="btn-quick-switch-mode" style="background:none; border:none; color:#10b981; font-weight:700; cursor:pointer; text-decoration:underline; padding:0 4px; font-size:11px;">
+                Daftar Baru Sekarang →
+              </button>
+            </div>
 
             <!-- Mode Tamu / Demo Offline -->
             <div style="margin-top:12px; text-align:center;">
               <button type="button" id="btn-guest-mode" class="guest-mode-btn">
-                Masuk Mode Tamu (Offline / Demo)
+                Masuk Langsung (Demo Cepat)
               </button>
             </div>
 
             <div class="auth-footer-privacy" style="margin-top:14px; font-size:10px; color:#64748b; text-align:center; line-height:1.4; display:flex; align-items:center; justify-content:center; gap:5px;">
               <i data-lucide="shield-check" style="width:12px; height:12px; color:#10b981;"></i>
-              <span>Data belanja terenkripsi privat di Firebase Firestore akun Anda.</span>
+              <span>Smart Grocery Demo • Data tersimpan aman di browser Anda.</span>
             </div>
           </form>
         </div>
       </div>
 
-      <!-- Container Aplikasi Utama (Muncul setelah Login) -->
-      <div id="app-main-content" style="display: none;">
+      <!-- Header Sesi Belanja (Context: Toko & Tanggal) -->
       <header class="session-header-card">
         <div class="brand-row">
           <div class="brand-badge">
@@ -672,7 +686,6 @@
           <span class="nav-tab-label">Anggaran</span>
         </button>
       </nav>
-      </div> <!-- /#app-main-content -->
 
       <!-- ============================================================== -->
       <!-- BOTTOM SHEET MODAL: TAMBAH / EDIT ITEM BELANJA (Ergonomi Mobile)-->
@@ -973,7 +986,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 
   <!-- Main Application Script (Self-contained, 100% compatible with file:/// and http://) -->
-  <script src="./js/app.js"></script>
+  <script src="./js/app.js?v=2.0"></script>
 
 </body>
 

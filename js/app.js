@@ -221,10 +221,6 @@ const QUICK_PRODUCTS = [
   { name: 'Fiesta Chicken Nugget 500g', category: 'Makanan Cepat Saji', unit: 'pack', defaultPrice: 45000 },
   { name: 'Rinso Cair Molto 750ml', category: 'Mandi & Cuci', unit: 'pack', defaultPrice: 21000 },
   { name: 'Sabun Mandi Lifebuoy Refill 450ml', category: 'Mandi & Cuci', unit: 'pack', defaultPrice: 23500 },
-  { name: 'Sunlight Jeruk Nipis 750ml', category: 'Mandi & Cuci', unit: 'pack', defaultPrice: 15500 }
-];
-  { name: 'Rinso Cair Molto 750ml', category: 'Mandi & Cuci', unit: 'pack', defaultPrice: 21000 },
-  { name: 'Sabun Mandi Lifebuoy Refill 450ml', category: 'Mandi & Cuci', unit: 'pack', defaultPrice: 23500 },
   { name: 'Sunlight Jeruk Nipis 750ml', category: 'Mandi & Cuci', unit: 'pack', defaultPrice: 15500 },
   { name: 'Pasta Gigi Pepsodent 225g', category: 'Mandi & Cuci', unit: 'pcs', defaultPrice: 16500 },
   { name: 'Kopi Kapal Api Special Mix 10x24g', category: 'Minuman', unit: 'pack', defaultPrice: 14500 },
@@ -245,8 +241,7 @@ const StorageService = {
   },
 
   getUserKey(baseKey) {
-    const uid = this.currentUserId || 'local_user';
-    return `${baseKey}_${uid}`;
+    return baseKey;
   },
 
   setSyncCallback(callback) {
@@ -1351,7 +1346,7 @@ function showToast(message, icon = '✨') {
 // 10. DOM REFERENCES & UI INITIALIZATION
 // ============================================================================
 StorageService.init();
-const cartManager = new CartManager();
+let cartManager = new CartManager();
 
 // Global DOM elements
 let storeSelect, sessionDateInput, cartItemsList, quickProductsChips, cartItemCount, navCartBadge;
@@ -2226,8 +2221,10 @@ function switchTab(tabKey) {
 }
 
 // ============================================================================
-// 16. TAB 2: RIWAYAT SESI BELANJA & CROSS-STORE SEARCH (F-06)
+// 16. TAB 2: RIWAYAT SESI BELANJA & CROSS-STORE SEARCH (F-06 / Requirement 2)
 // ============================================================================
+let currentDetailSession = null;
+
 function renderHistorySessions() {
   const sessions = HistoryService.getSessions();
   const listEl = document.getElementById('history-sessions-list');
@@ -2250,39 +2247,131 @@ function renderHistorySessions() {
       weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
     });
 
+    const totalSpentText = CurrencyUtils.formatRupiah(session.totalSpent);
+    const totalSavedText = CurrencyUtils.formatRupiah(session.totalSaved || 0);
+    const itemsCount = session.items ? session.items.length : 0;
+
     card.innerHTML = `
       <div class="session-card-header">
         <span class="session-store-title">🏪 ${escapeHtml(session.storeName)}</span>
         <span class="session-date-label">${formattedDate}</span>
       </div>
       <div style="font-size:12px; color:#cbd5e1; margin-bottom:6px;">
-        ${session.note ? `<em>"${escapeHtml(session.note)}"</em> • ` : ''}${session.items ? session.items.length : 0} Barang Belanjaan
+        ${session.note ? `<em>"${escapeHtml(session.note)}"</em> • ` : ''}${itemsCount} Barang Belanjaan
       </div>
       <div class="session-numbers-row">
         <div>
           <span style="font-size:11px; color:#94a3b8;">Total Transaksi:</span>
-          <div style="font-size:16px; font-weight:800; color:#34d399;">${CurrencyUtils.formatRupiah(session.totalSpent)}</div>
+          <div style="font-size:16px; font-weight:800; color:#34d399;">${totalSpentText}</div>
         </div>
         <div style="text-align:right;">
           <span style="font-size:11px; color:#94a3b8;">Total Hemat:</span>
-          <div style="font-size:14px; font-weight:700; color:#fbbf24;">${CurrencyUtils.formatRupiah(session.totalSaved || 0)}</div>
+          <div style="font-size:14px; font-weight:700; color:#fbbf24;">${totalSavedText}</div>
         </div>
       </div>
-      
-      <details style="margin-top:10px; font-size:12px;">
-        <summary style="cursor:pointer; color:#94a3b8; font-weight:600;">Lihat Rincian ${session.items?.length || 0} Barang...</summary>
-        <div style="background:rgba(0,0,0,0.25); border-radius:8px; padding:8px; margin-top:6px;">
-          ${(session.items || []).map(it => `
-            <div style="display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.04);">
-              <span>${it.qty}x ${escapeHtml(it.name)}</span>
-              <strong>${CurrencyUtils.formatRupiah(it.subtotal)}</strong>
-            </div>
-          `).join('')}
-        </div>
-      </details>
+      <div style="margin-top:8px; display:flex; justify-content:space-between; align-items:center; font-size:11px; color:#38bdf8; font-weight:700;">
+        <span>🔍 Klik untuk lihat rincian lengkap barang</span>
+        <span>→</span>
+      </div>
     `;
 
+    card.addEventListener('click', () => {
+      openHistoryDetailModal(session);
+    });
+
     listEl.appendChild(card);
+  });
+}
+
+function openHistoryDetailModal(session) {
+  currentDetailSession = session;
+  const overlay = document.getElementById('history-detail-modal-overlay');
+  const storeTitle = document.getElementById('history-detail-store-title');
+  const dateBadge = document.getElementById('history-detail-date-badge');
+  const totalSpentEl = document.getElementById('history-detail-total-spent');
+  const totalSavedEl = document.getElementById('history-detail-total-saved');
+  const noteEl = document.getElementById('history-detail-note');
+  const itemsCountEl = document.getElementById('history-detail-items-count');
+  const tableEl = document.getElementById('history-detail-items-table');
+
+  if (!overlay) return;
+
+  if (storeTitle) storeTitle.textContent = session.storeName;
+  if (dateBadge) {
+    const formattedDate = new Date(session.date).toLocaleDateString('id-ID', {
+      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+    });
+    dateBadge.textContent = formattedDate;
+  }
+  if (totalSpentEl) totalSpentEl.textContent = CurrencyUtils.formatRupiah(session.totalSpent);
+  if (totalSavedEl) totalSavedEl.textContent = CurrencyUtils.formatRupiah(session.totalSaved || 0);
+  if (noteEl) noteEl.textContent = session.note ? `Catatan: "${session.note}"` : '';
+
+  const items = session.items || [];
+  if (itemsCountEl) itemsCountEl.textContent = `Daftar Barang (${items.length} Jenis)`;
+
+  if (tableEl) {
+    tableEl.innerHTML = '';
+    items.forEach(it => {
+      const row = document.createElement('div');
+      row.className = 'history-detail-item-row';
+      const hasDiscount = it.discountString && it.discountString !== '0' && it.discountString !== '0%';
+      row.innerHTML = `
+        <div class="history-item-left">
+          <span class="history-item-name">${escapeHtml(it.name)}</span>
+          <span class="history-item-sub">
+            ${it.qty} ${escapeHtml(it.unit || 'pcs')} • @ ${CurrencyUtils.formatRupiah(it.finalUnitPrice || it.originalPrice)}
+            ${hasDiscount ? `<span style="color:#fbbf24; font-weight:700;">(Diskon: ${escapeHtml(it.discountString)})</span>` : ''}
+          </span>
+        </div>
+        <div class="history-item-right">
+          <span class="history-item-subtotal">${CurrencyUtils.formatRupiah(it.subtotal)}</span>
+          ${it.discountSavings > 0 ? `<div class="history-item-savings">Hemat ${CurrencyUtils.formatRupiah(it.discountSavings)}</div>` : ''}
+        </div>
+      `;
+      tableEl.appendChild(row);
+    });
+  }
+
+  overlay.classList.add('open');
+}
+
+function initHistoryDetailModalListeners() {
+  const overlay = document.getElementById('history-detail-modal-overlay');
+  const btnClose = document.getElementById('btn-close-history-modal');
+  const btnReorder = document.getElementById('btn-reorder-history-items');
+  const btnDelete = document.getElementById('btn-delete-history-session');
+
+  btnClose?.addEventListener('click', () => overlay?.classList.remove('open'));
+
+  btnReorder?.addEventListener('click', () => {
+    if (!currentDetailSession || !currentDetailSession.items) return;
+    cartManager.items = JSON.parse(JSON.stringify(currentDetailSession.items));
+    if (currentDetailSession.storeName) {
+      cartManager.setStore(currentDetailSession.storeName);
+      if (storeSelect) storeSelect.value = currentDetailSession.storeName;
+    }
+    StorageService.saveCart(cartManager.items);
+    dispatchTrolleySync(true);
+    overlay?.classList.remove('open');
+    showToast(`Daftar belanja dari ${currentDetailSession.storeName} dimuat ke troli!`, '🛒');
+    renderCart();
+    renderBudgetStatus();
+    switchTab('belanja');
+  });
+
+  btnDelete?.addEventListener('click', () => {
+    if (!currentDetailSession) return;
+    if (confirm(`Yakin ingin menghapus riwayat sesi ${currentDetailSession.storeName}?`)) {
+      const sessionId = currentDetailSession.id;
+      StorageService.deleteHistorySession(sessionId);
+      if (currentAuthUser && !currentAuthUser.isGuest) {
+        FirebaseSync.deleteHistory(currentAuthUser.uid, sessionId);
+      }
+      overlay?.classList.remove('open');
+      renderHistorySessions();
+      showToast('Riwayat sesi belanja berhasil dihapus.', '🗑️');
+    }
   });
 }
 
@@ -2324,7 +2413,7 @@ function renderCrossStoreResults(query) {
 }
 
 // ============================================================================
-// 17. TAB 3: ANGGARAN & CATEGORY BREAKDOWN
+// 17. TAB 3: ANGGARAN & CATEGORY BREAKDOWN (Requirement 3)
 // ============================================================================
 function renderCategoryBreakdown() {
   const container = document.getElementById('category-distribution-container');
@@ -2339,29 +2428,197 @@ function renderCategoryBreakdown() {
         Belum ada item di troli untuk dianalisis.
       </div>
     `;
+  } else {
+    container.innerHTML = '';
+    breakdown.forEach(b => {
+      const itemEl = document.createElement('div');
+      itemEl.className = 'category-bar-item';
+      itemEl.innerHTML = `
+        <div class="category-bar-label">
+          <span>${escapeHtml(b.category)}</span>
+          <span><strong>${CurrencyUtils.formatRupiah(b.amount)}</strong> (${b.percentage}%)</span>
+        </div>
+        <div class="category-bar-track">
+          <div class="category-bar-fill" style="width: ${b.percentage}%;"></div>
+        </div>
+      `;
+      container.appendChild(itemEl);
+    });
+  }
+
+  // Also render interactive category budgets
+  renderCategoryBudgets();
+}
+
+function renderCategoryBudgets() {
+  const container = document.getElementById('category-budgets-list');
+  if (!container) return;
+
+  const categoryBudgets = StorageService.getCategoryBudgets();
+  const cartItems = cartManager.getItems();
+
+  if (categoryBudgets.length === 0) {
+    container.innerHTML = `
+      <div style="font-size:12px; color:#94a3b8; text-align:center; padding:12px;">
+        Belum ada pos anggaran kategori. Klik <strong>+ Tambah Pos</strong> di atas untuk membuat anggaran khusus.
+      </div>
+    `;
     return;
   }
 
   container.innerHTML = '';
-  breakdown.forEach(b => {
-    const itemEl = document.createElement('div');
-    itemEl.className = 'category-bar-item';
-    itemEl.innerHTML = `
-      <div class="category-bar-label">
-        <span>${escapeHtml(b.category)}</span>
-        <span><strong>${CurrencyUtils.formatRupiah(b.amount)}</strong> (${b.percentage}%)</span>
+  categoryBudgets.forEach(cat => {
+    const catClean = cat.name.trim().toLowerCase();
+    let spent = 0;
+    cartItems.forEach(it => {
+      const itCat = (it.category || '').toLowerCase();
+      if (itCat === catClean || itCat.includes(catClean) || catClean.includes(itCat)) {
+        spent += it.subtotal;
+      }
+    });
+
+    const remaining = cat.limit - spent;
+    const percentage = cat.limit > 0 ? Math.round((spent / cat.limit) * 100) : 0;
+    let statusClass = 'safe';
+    let statusLabel = 'Aman';
+
+    if (percentage > 100) {
+      statusClass = 'danger';
+      statusLabel = `Melebihi Anggaran (${percentage}%)`;
+    } else if (percentage >= 90) {
+      statusClass = 'warning';
+      statusLabel = `Mendekati Batas (${percentage}%)`;
+    } else {
+      statusLabel = `${percentage}% terpakai`;
+    }
+
+    const card = document.createElement('div');
+    card.className = 'category-budget-item';
+    card.innerHTML = `
+      <div class="cat-budget-top">
+        <div class="cat-budget-title-row">
+          <span class="cat-budget-name">${escapeHtml(cat.name)}</span>
+          <span class="safety-status-pill status-${statusClass}" style="font-size:10px; padding:2px 6px;">
+            ${statusLabel}
+          </span>
+        </div>
+        <div class="cat-budget-actions">
+          <button type="button" class="cat-action-btn edit" title="Ubah Batas Anggaran" data-id="${cat.id}">
+            <i data-lucide="pencil" style="width:13px; height:13px;"></i>
+          </button>
+          <button type="button" class="cat-action-btn delete" title="Hapus Pos Anggaran" data-id="${cat.id}">
+            <i data-lucide="trash-2" style="width:13px; height:13px;"></i>
+          </button>
+        </div>
       </div>
-      <div class="category-bar-track">
-        <div class="category-bar-fill" style="width: ${b.percentage}%;"></div>
+
+      <div class="cat-budget-stat-row">
+        <span>Batas: <strong>${CurrencyUtils.formatRupiah(cat.limit)}</strong></span>
+        <span>Terpakai: <strong style="color:${percentage > 100 ? '#f43f5e' : (percentage >= 90 ? '#f59e0b' : '#34d399')};">${CurrencyUtils.formatRupiah(spent)}</strong></span>
+        <span>Sisa: <strong style="color:${remaining < 0 ? '#f43f5e' : '#38bdf8'};">${CurrencyUtils.formatRupiah(Math.abs(remaining))} ${remaining < 0 ? 'lebih' : ''}</strong></span>
+      </div>
+
+      <div class="cat-budget-progress-track">
+        <div class="cat-budget-progress-fill ${statusClass}" style="width: ${Math.min(percentage, 100)}%;"></div>
       </div>
     `;
-    container.appendChild(itemEl);
+
+    card.querySelector('.cat-action-btn.edit')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openCategoryBudgetModal(cat);
+    });
+
+    card.querySelector('.cat-action-btn.delete')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (confirm(`Hapus pos anggaran "${cat.name}"?`)) {
+        StorageService.deleteCategoryBudget(cat.id);
+        dispatchBudgetSync();
+        renderCategoryBudgets();
+        showToast(`Pos anggaran "${cat.name}" dihapus.`, '🗑️');
+      }
+    });
+
+    container.appendChild(card);
+  });
+
+  refreshLucideIcons();
+}
+
+function openCategoryBudgetModal(cat = null) {
+  const overlay = document.getElementById('category-budget-modal-overlay');
+  const title = document.getElementById('modal-cat-budget-title');
+  const editIdInput = document.getElementById('edit-cat-budget-id');
+  const nameInput = document.getElementById('input-cat-budget-name');
+  const limitInput = document.getElementById('input-cat-budget-limit');
+
+  if (!overlay) return;
+
+  if (cat) {
+    if (title) title.textContent = 'Ubah Pos Anggaran';
+    if (editIdInput) editIdInput.value = cat.id;
+    if (nameInput) nameInput.value = cat.name;
+    if (limitInput) limitInput.value = CurrencyUtils.formatRupiah(cat.limit);
+  } else {
+    if (title) title.textContent = 'Tambah Pos Anggaran Baru';
+    if (editIdInput) editIdInput.value = '';
+    if (nameInput) nameInput.value = '';
+    if (limitInput) limitInput.value = 'Rp 100.000';
+  }
+
+  overlay.classList.add('open');
+  setTimeout(() => nameInput?.focus(), 250);
+}
+
+function initCategoryBudgetModalListeners() {
+  const overlay = document.getElementById('category-budget-modal-overlay');
+  const btnClose = document.getElementById('btn-close-cat-budget-modal');
+  const btnOpenAdd = document.getElementById('btn-open-cat-budget-modal');
+  const form = document.getElementById('category-budget-form');
+  const limitInput = document.getElementById('input-cat-budget-limit');
+
+  btnClose?.addEventListener('click', () => overlay?.classList.remove('open'));
+  btnOpenAdd?.addEventListener('click', () => openCategoryBudgetModal());
+
+  if (limitInput) {
+    limitInput.addEventListener('input', (e) => {
+      const val = CurrencyUtils.parseRupiah(e.target.value);
+      e.target.value = CurrencyUtils.formatRupiah(val);
+    });
+  }
+
+  form?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const editId = document.getElementById('edit-cat-budget-id')?.value;
+    const name = document.getElementById('input-cat-budget-name')?.value.trim();
+    const limit = CurrencyUtils.parseRupiah(document.getElementById('input-cat-budget-limit')?.value);
+
+    if (!name || limit <= 0) {
+      showToast('Nama pos dan batas anggaran harus valid!', '⚠️');
+      return;
+    }
+
+    if (editId) {
+      StorageService.updateCategoryBudget(editId, { name, limit });
+      showToast(`Pos anggaran "${name}" berhasil diubah!`, '✏️');
+    } else {
+      StorageService.addCategoryBudget({ name, limit });
+      showToast(`Pos anggaran "${name}" berhasil ditambahkan!`, '🎉');
+    }
+
+    overlay?.classList.remove('open');
+    dispatchBudgetSync();
+    renderCategoryBudgets();
   });
 }
 
 // ============================================================================
-// 18. REALTIME MULTI-DEVICE FIRESTORE SYNC & LOCALSTORAGE FALLBACK
+// 18. REALTIME MULTI-DEVICE FIRESTORE SYNC & AUTHENTICATION (Requirements 1 & 4)
 // ============================================================================
+let currentAuthUser = null;
+let activeTrolleyUnsubscribe = null;
+let budgetUnsubscribe = null;
+let historyUnsubscribe = null;
+
 function setSyncBadgeState(state, customText) {
   const badge = document.getElementById('cloud-sync-badge');
   const dot = document.getElementById('cloud-sync-dot');
@@ -2380,7 +2637,7 @@ function setSyncBadgeState(state, customText) {
     badge.classList.add('offline');
     dot.style.background = '#f59e0b';
     text.textContent = customText || 'Offline';
-    badge.title = 'Mode Offline: Keranjang belanja tersimpan aman di LocalStorage.';
+    badge.title = 'Mode Offline: Data tersimpan aman di LocalStorage.';
   } else if (state === 'syncing') {
     badge.classList.add('syncing');
     dot.classList.add('sync-pulse');
@@ -2394,6 +2651,7 @@ let syncDebounceTimer = null;
 
 function dispatchTrolleySync(immediate = false) {
   if (StorageService.isApplyingRemote()) return Promise.resolve(false);
+  if (!currentAuthUser || currentAuthUser.isGuest) return Promise.resolve(false);
 
   const totals = cartManager.getTotals();
   const payload = {
@@ -2411,7 +2669,7 @@ function dispatchTrolleySync(immediate = false) {
 
   return new Promise((resolve) => {
     const doSync = () => {
-      FirebaseSync.syncActiveTrolley(payload).then((success) => {
+      FirebaseSync.syncActiveTrolley(currentAuthUser.uid, payload).then((success) => {
         if (success) {
           setSyncBadgeState('online');
         } else {
@@ -2431,18 +2689,17 @@ function dispatchTrolleySync(immediate = false) {
   });
 }
 
-function initRealtimeSync() {
-  StorageService.setSyncCallback(({ type, data }) => {
-    if (type === 'cart' || type === 'meta' || type === 'budget') {
-      dispatchTrolleySync();
-    } else if (type === 'stores') {
-      FirebaseSync.syncStores(data);
-    } else if (type === 'history') {
-      FirebaseSync.saveHistory(data);
-    }
-  });
+function dispatchBudgetSync() {
+  if (!currentAuthUser || currentAuthUser.isGuest) return;
+  const payload = {
+    walletLimit: StorageService.getBudget(),
+    categoryBudgets: StorageService.getCategoryBudgets()
+  };
+  FirebaseSync.syncBudget(currentAuthUser.uid, payload);
+}
 
-  FirebaseSync.subscribeActiveTrolley((remoteData, meta) => {
+function bindUserRealtimeListeners(uid) {
+  activeTrolleyUnsubscribe = FirebaseSync.subscribeActiveTrolley(uid, (remoteData, meta) => {
     if (!remoteData) {
       dispatchTrolleySync(true);
       return;
@@ -2469,17 +2726,233 @@ function initRealtimeSync() {
     }
   });
 
-  FirebaseSync.subscribeHistory((remoteSessions) => {
-    if (Array.isArray(remoteSessions) && remoteSessions.length > 0) {
+  budgetUnsubscribe = FirebaseSync.subscribeBudget(uid, (remoteBudget) => {
+    if (!remoteBudget) return;
+    if (typeof remoteBudget.walletLimit === 'number' && remoteBudget.walletLimit > 0) {
+      StorageService.saveBudget(remoteBudget.walletLimit);
+      const inputBudgetCap = document.getElementById('input-budget-cap');
+      if (inputBudgetCap) inputBudgetCap.value = CurrencyUtils.formatRupiah(remoteBudget.walletLimit);
+    }
+    if (Array.isArray(remoteBudget.categoryBudgets)) {
+      StorageService.saveCategoryBudgets(remoteBudget.categoryBudgets);
+    }
+    renderBudgetStatus();
+    renderCategoryBudgets();
+  });
+
+  historyUnsubscribe = FirebaseSync.subscribeHistory(uid, (remoteSessions) => {
+    if (Array.isArray(remoteSessions)) {
       StorageService.mergeRemoteHistory(remoteSessions);
       renderHistorySessions();
     }
   });
+}
 
-  FirebaseSync.subscribeStores((remoteStores) => {
-    if (Array.isArray(remoteStores) && remoteStores.length > 0) {
-      StorageService.mergeRemoteStores(remoteStores);
-      populateStoreDropdown();
+function initAuthUI() {
+  const authView = document.getElementById('auth-view');
+  const authForm = document.getElementById('auth-form');
+  const btnAuthSubmit = document.getElementById('btn-auth-submit');
+  const authUsernameInput = document.getElementById('auth-username');
+  const authPwInput = document.getElementById('auth-password');
+  const authTabLogin = document.getElementById('auth-tab-login');
+  const authTabRegister = document.getElementById('auth-tab-register');
+  const headingTitle = document.getElementById('auth-heading-title');
+  const headingDesc = document.getElementById('auth-heading-desc');
+  const authBtnLabel = document.getElementById('auth-btn-label');
+  const authAlert = document.getElementById('auth-alert');
+  const btnToggleAuthPw = document.getElementById('btn-toggle-auth-pw');
+  const btnQuickSwitchMode = document.getElementById('btn-quick-switch-mode');
+  const authSwitchText = document.getElementById('auth-switch-text');
+  const btnGuestMode = document.getElementById('btn-guest-mode');
+  const btnUserLogout = document.getElementById('btn-user-logout');
+
+  let authMode = 'login';
+
+  function setAuthMode(mode) {
+    authMode = mode;
+    if (mode === 'login') {
+      authTabLogin?.classList.add('active');
+      authTabRegister?.classList.remove('active');
+      if (headingTitle) headingTitle.textContent = 'Masuk ke Akun Anda';
+      if (headingDesc) headingDesc.textContent = 'Masukkan username dan kata sandi untuk masuk.';
+      if (authBtnLabel) authBtnLabel.textContent = 'Masuk ke Akun';
+      if (authSwitchText) authSwitchText.textContent = 'Belum punya akun?';
+      if (btnQuickSwitchMode) btnQuickSwitchMode.textContent = 'Daftar Baru Sekarang →';
+    } else {
+      authTabRegister?.classList.add('active');
+      authTabLogin?.classList.remove('active');
+      if (headingTitle) headingTitle.textContent = 'Daftar Akun Baru';
+      if (headingDesc) headingDesc.textContent = 'Daftarkan username dan kata sandi baru untuk akun Anda.';
+      if (authBtnLabel) authBtnLabel.textContent = 'Daftar Akun Baru';
+      if (authSwitchText) authSwitchText.textContent = 'Sudah punya akun?';
+      if (btnQuickSwitchMode) btnQuickSwitchMode.textContent = 'Masuk ke Akun Sekarang →';
+    }
+    if (authAlert) authAlert.style.display = 'none';
+    refreshLucideIcons();
+  }
+
+  authTabLogin?.addEventListener('click', (e) => {
+    e.preventDefault();
+    setAuthMode('login');
+  });
+
+  authTabRegister?.addEventListener('click', (e) => {
+    e.preventDefault();
+    setAuthMode('register');
+  });
+
+  btnQuickSwitchMode?.addEventListener('click', (e) => {
+    e.preventDefault();
+    setAuthMode(authMode === 'login' ? 'register' : 'login');
+  });
+
+  btnToggleAuthPw?.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (authPwInput) {
+      authPwInput.type = authPwInput.type === 'password' ? 'text' : 'password';
+    }
+  });
+
+  function doSubmitAuth() {
+    const username = authUsernameInput ? authUsernameInput.value.trim() : '';
+    const password = authPwInput ? authPwInput.value.trim() : '';
+
+    // Validasi: jika kolom kosong, tampilkan pesan agar pengguna mengisi keduanya
+    if (!username || !password) {
+      if (authAlert) {
+        authAlert.textContent = 'Harap isi username dan kata sandi terlebih dahulu!';
+        authAlert.className = 'auth-alert-banner error';
+        authAlert.style.display = 'block';
+      }
+      return;
+    }
+
+    if (authAlert) authAlert.style.display = 'none';
+
+    const user = {
+      uid: 'user_' + encodeURIComponent(username.toLowerCase()),
+      username: username,
+      displayName: username,
+      isLocal: true
+    };
+
+    if (authMode === 'register') {
+      showToast(`Pendaftaran berhasil! Selamat datang, ${username}.`, '🎉');
+    } else {
+      showToast(`Login berhasil! Selamat berbelanja, ${username}.`, '🎉');
+    }
+
+    handleUserSignedIn(user);
+  }
+
+  btnAuthSubmit?.addEventListener('click', (e) => {
+    e.preventDefault();
+    doSubmitAuth();
+  });
+
+  authForm?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    doSubmitAuth();
+  });
+
+  btnGuestMode?.addEventListener('click', (e) => {
+    e.preventDefault();
+    handleUserSignedIn({
+      uid: 'guest_demo',
+      username: 'Tamu Demo',
+      displayName: 'Tamu Demo',
+      isGuest: true
+    });
+    showToast('Masuk langsung sebagai Tamu Demo', '👤');
+  });
+
+  btnUserLogout?.addEventListener('click', (e) => {
+    e.preventDefault();
+    handleUserSignedOut();
+    showToast('Anda telah keluar dari akun.', '👋');
+  });
+
+  // Periksa apakah pengguna sebelumnya sudah login
+  try {
+    const savedSession = localStorage.getItem('smart_grocery_active_user');
+    if (savedSession) {
+      const parsed = JSON.parse(savedSession);
+      if (parsed && parsed.username) {
+        handleUserSignedIn(parsed);
+        return;
+      }
+    }
+  } catch (err) {}
+
+  // Tampilkan form login jika belum ada sesi aktif
+  handleUserSignedOut();
+}
+
+function handleUserSignedIn(user) {
+  currentAuthUser = user;
+
+  const authView = document.getElementById('auth-view');
+  if (authView) authView.style.display = 'none';
+
+  const userEmailDisplay = document.getElementById('user-email-display');
+  if (userEmailDisplay) userEmailDisplay.textContent = user.username || user.displayName || 'Pengguna';
+
+  try {
+    localStorage.setItem('smart_grocery_active_user', JSON.stringify(user));
+  } catch (e) {}
+
+  try {
+    cartManager = new CartManager();
+    populateStoreDropdown();
+    initDateInput();
+    initQuickChips();
+    renderCart();
+    renderBudgetStatus();
+    renderHistorySessions();
+    renderCategoryBreakdown();
+    renderCategoryBudgets();
+    refreshLucideIcons();
+  } catch (renderErr) {
+    console.warn('handleUserSignedIn render warning:', renderErr);
+  }
+
+  setSyncBadgeState('online', 'Tersimpan Lokal');
+}
+
+function handleUserSignedOut() {
+  currentAuthUser = null;
+  try {
+    localStorage.removeItem('smart_grocery_active_user');
+  } catch (e) {}
+
+  const authView = document.getElementById('auth-view');
+  if (authView) authView.style.display = 'flex';
+
+  const authUsernameInput = document.getElementById('auth-username');
+  const authPwInput = document.getElementById('auth-password');
+  const authAlert = document.getElementById('auth-alert');
+  if (authUsernameInput) authUsernameInput.value = '';
+  if (authPwInput) authPwInput.value = '';
+  if (authAlert) authAlert.style.display = 'none';
+}
+
+function initRealtimeSync() {
+  StorageService.setSyncCallback(({ type, data }) => {
+    if (type === 'cart' || type === 'meta') {
+      dispatchTrolleySync();
+    } else if (type === 'budget') {
+      dispatchBudgetSync();
+      dispatchTrolleySync();
+    } else if (type === 'stores') {
+      FirebaseSync.syncStores(data);
+    } else if (type === 'history') {
+      if (currentAuthUser && !currentAuthUser.isGuest) {
+        FirebaseSync.saveHistory(currentAuthUser.uid, data);
+      }
+    } else if (type === 'history_delete') {
+      if (currentAuthUser && !currentAuthUser.isGuest) {
+        FirebaseSync.deleteHistory(currentAuthUser.uid, data.id);
+      }
     }
   });
 
@@ -2487,6 +2960,7 @@ function initRealtimeSync() {
     setSyncBadgeState('online', 'Cloud Sync');
     showToast('Koneksi internet aktif! Menyinkronkan...', '🌐');
     dispatchTrolleySync(true);
+    dispatchBudgetSync();
   });
 
   window.addEventListener('offline', () => {
@@ -2498,9 +2972,10 @@ function initRealtimeSync() {
   if (cloudBadge) {
     cloudBadge.addEventListener('click', () => {
       const myDev = FirebaseSync.getDeviceType();
-      if (navigator.onLine) {
-        showToast(`Cloud Realtime Aktif (${myDev}) ↔ Terhubung ke HP & PC`, '🟢');
+      if (navigator.onLine && currentAuthUser && !currentAuthUser.isGuest) {
+        showToast(`Cloud Realtime Aktif (${myDev}) ↔ HP & PC sinkron`, '🟢');
         dispatchTrolleySync(true);
+        dispatchBudgetSync();
       } else {
         showToast(`Mode Offline: Keranjang aman di LocalStorage (${myDev})`, '🟡');
       }
@@ -2611,6 +3086,27 @@ function escapeHtml(str) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+}
+
+function initApp() {
+  try { grabDOMElements(); } catch (e) { console.warn('grabDOMElements notice:', e); }
+  try { initClock(); } catch (e) { console.warn('initClock notice:', e); }
+  try { populateStoreDropdown(); } catch (e) { console.warn('populateStoreDropdown notice:', e); }
+  try { initDateInput(); } catch (e) { console.warn('initDateInput notice:', e); }
+  try { initQuickChips(); } catch (e) { console.warn('initQuickChips notice:', e); }
+  try { renderCart(); } catch (e) { console.warn('renderCart notice:', e); }
+  try { renderBudgetStatus(); } catch (e) { console.warn('renderBudgetStatus notice:', e); }
+  try { renderHistorySessions(); } catch (e) { console.warn('renderHistorySessions notice:', e); }
+  try { renderCategoryBreakdown(); } catch (e) { console.warn('renderCategoryBreakdown notice:', e); }
+  try { renderCategoryBudgets(); } catch (e) { console.warn('renderCategoryBudgets notice:', e); }
+  try { initModalListeners(); } catch (e) { console.warn('initModalListeners notice:', e); }
+  try { initHistoryDetailModalListeners(); } catch (e) { console.warn('initHistoryDetailModalListeners notice:', e); }
+  try { initCategoryBudgetModalListeners(); } catch (e) { console.warn('initCategoryBudgetModalListeners notice:', e); }
+  try { initTabs(); } catch (e) { console.warn('initTabs notice:', e); }
+  try { initPWA(); } catch (e) { console.warn('initPWA notice:', e); }
+  try { refreshLucideIcons(); } catch (e) { console.warn('refreshLucideIcons notice:', e); }
+  try { initRealtimeSync(); } catch (e) { console.warn('initRealtimeSync notice:', e); }
+  try { initAuthUI(); } catch (e) { console.error('initAuthUI error:', e); }
 }
 
 // Initialize when DOM is ready

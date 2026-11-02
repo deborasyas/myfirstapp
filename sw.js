@@ -1,4 +1,4 @@
-const CACHE_NAME = 'smart-grocery-v1';
+const CACHE_NAME = 'smart-grocery-v6';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -38,25 +38,18 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Network first for APIs, Cache first for assets, fallback to cache
+  // Network first: always get fresh files during active development, fallback to cache when offline
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        // Fetch in background to update cache
-        fetch(event.request).then((networkResponse) => {
-          if (networkResponse && networkResponse.status === 200) {
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(event.request, networkResponse);
-            });
-          }
-        }).catch(() => {/* Offline */});
-        return cachedResponse;
-      }
-      return fetch(event.request).catch(() => {
-        if (event.request.headers.get('accept')?.includes('text/html')) {
-          return caches.match('./index.html');
+    fetch(event.request)
+      .then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200) {
+          const responseClone = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseClone);
+          });
         }
-      });
-    })
+        return networkResponse;
+      })
+      .catch(() => caches.match(event.request))
   );
 });
