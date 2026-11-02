@@ -8,6 +8,7 @@ const ASSETS_TO_CACHE = [
   './js/history.js',
   './js/budget.js',
   './js/storage.js',
+  './js/firebase.js',
   './manifest.json',
   './assets/icon-192.jpg',
   './assets/icon-512.jpg',

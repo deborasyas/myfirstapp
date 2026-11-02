@@ -226,6 +226,42 @@ html, body {
   gap: 4px;
 }
 
+.cloud-sync-badge {
+  background: rgba(59, 130, 246, 0.12);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  color: #60a5fa;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cloud-sync-badge.online {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: var(--emerald-400);
+}
+
+.cloud-sync-badge.offline {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.3);
+  color: #fbbf24;
+}
+
+.cloud-sync-badge.syncing {
+  background: rgba(139, 92, 246, 0.12);
+  border-color: rgba(139, 92, 246, 0.3);
+  color: #c084fc;
+}
+
+.sync-pulse {
+  animation: syncPulseAnim 1.4s infinite ease-in-out;
+}
+
+@keyframes syncPulseAnim {
+  0% { transform: scale(0.95); opacity: 0.6; }
+  50% { transform: scale(1.3); opacity: 1; }
+  100% { transform: scale(0.95); opacity: 0.6; }
+}
+
 /* Header Session Selectors */
 .session-context-controls {
   display: grid;
@@ -617,11 +653,11 @@ html, body {
   color: var(--emerald-400);
 }
 
-/* Price EQUAL (Tanda Setara) */
+/* Price EQUAL (Tanda Setara Abu-abu - Harga Tetap Stabil) */
 .badge-price-equal {
-  background: rgba(59, 130, 246, 0.15);
-  border: 1px solid rgba(59, 130, 246, 0.35);
-  color: #93c5fd;
+  background: rgba(148, 163, 184, 0.15);
+  border: 1px solid rgba(148, 163, 184, 0.38);
+  color: #94a3b8;
 }
 
 /* Brand New Item */

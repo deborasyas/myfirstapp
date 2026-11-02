@@ -1,6 +1,7 @@
 /**
  * Storage & Database Layer - Smart Grocery & Budget Safety Tracker
- * Multi-store persistence, pre-seeded historical data, and lookup queries
+ * Multi-store persistence, pre-seeded historical data, lookup queries,
+ * and Realtime Synchronization hooks with Cloud Firestore & LocalStorage fallback.
  */
 
 const STORAGE_KEYS = {
@@ -134,6 +135,31 @@ export const QUICK_PRODUCTS = [
 ];
 
 export const StorageService = {
+  _syncCallback: null,
+  _isApplyingRemote: false,
+
+  setSyncCallback(callback) {
+    this._syncCallback = callback;
+  },
+
+  setApplyingRemote(isRemote) {
+    this._isApplyingRemote = !!isRemote;
+  },
+
+  isApplyingRemote() {
+    return this._isApplyingRemote;
+  },
+
+  notifyChange(type, data) {
+    if (!this._isApplyingRemote && typeof this._syncCallback === 'function') {
+      try {
+        this._syncCallback({ type, data });
+      } catch (e) {
+        console.warn('StorageService sync callback warning:', e);
+      }
+    }
+  },
+
   init() {
     if (!localStorage.getItem(STORAGE_KEYS.STORES)) {
       localStorage.setItem(STORAGE_KEYS.STORES, JSON.stringify(DEFAULT_STORES));
@@ -178,8 +204,24 @@ export const StorageService = {
         icon: 'store'
       });
       localStorage.setItem(STORAGE_KEYS.STORES, JSON.stringify(stores));
+      this.notifyChange('stores', stores);
     }
     return stores;
+  },
+
+  mergeRemoteStores(remoteStores) {
+    if (!Array.isArray(remoteStores) || remoteStores.length === 0) return this.getStores();
+    const local = this.getStores();
+    const map = new Map();
+    local.forEach(s => map.set(s.name.toLowerCase(), s));
+    remoteStores.forEach(s => {
+      if (s && s.name && !map.has(s.name.toLowerCase())) {
+        map.set(s.name.toLowerCase(), s);
+      }
+    });
+    const merged = Array.from(map.values());
+    localStorage.setItem(STORAGE_KEYS.STORES, JSON.stringify(merged));
+    return merged;
   },
 
   getSessionMeta() {
@@ -199,6 +241,7 @@ export const StorageService = {
 
   saveSessionMeta(meta) {
     localStorage.setItem(STORAGE_KEYS.SESSION_META, JSON.stringify(meta));
+    this.notifyChange('meta', meta);
   },
 
   getCart() {
@@ -212,6 +255,7 @@ export const StorageService = {
 
   saveCart(cart) {
     localStorage.setItem(STORAGE_KEYS.CURRENT_CART, JSON.stringify(cart));
+    this.notifyChange('cart', cart);
   },
 
   getBudget() {
@@ -221,6 +265,7 @@ export const StorageService = {
 
   saveBudget(budget) {
     localStorage.setItem(STORAGE_KEYS.USER_BUDGET, budget.toString());
+    this.notifyChange('budget', budget);
   },
 
   getHistorySessions() {
@@ -234,9 +279,23 @@ export const StorageService = {
 
   saveHistorySession(session) {
     const history = this.getHistorySessions();
-    history.unshift(session); // prepend newest
+    if (!history.some(h => h.id === session.id)) {
+      history.unshift(session); // prepend newest
+    }
     localStorage.setItem(STORAGE_KEYS.SESSIONS_HISTORY, JSON.stringify(history));
+    this.notifyChange('history', session);
     return history;
+  },
+
+  mergeRemoteHistory(remoteSessions) {
+    if (!Array.isArray(remoteSessions) || remoteSessions.length === 0) return this.getHistorySessions();
+    const local = this.getHistorySessions();
+    const map = new Map();
+    local.forEach(s => map.set(s.id, s));
+    remoteSessions.forEach(s => map.set(s.id, s));
+    const merged = Array.from(map.values()).sort((a, b) => new Date(b.savedAt || b.date) - new Date(a.savedAt || a.date));
+    localStorage.setItem(STORAGE_KEYS.SESSIONS_HISTORY, JSON.stringify(merged));
+    return merged;
   },
 
   /**

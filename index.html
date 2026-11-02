@@ -1,31 +1,36 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="id">
+
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Smart Grocery & Budget Safety Tracker | Siswa Rantau PWA</title>
-  
+
   <!-- PWA & Mobile Meta Tags -->
   <meta name="theme-color" content="#0f172a">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Smart Grocery">
-  <meta name="description" content="Aplikasi Web Mobile PWA Pendamping Belanja Bulanan & Pengendali Anggaran Siswa Rantau saat Mendorong Troli Supermarket.">
+  <meta name="description"
+    content="Aplikasi Web Mobile PWA Pendamping Belanja Bulanan & Pengendali Anggaran Siswa Rantau saat Mendorong Troli Supermarket.">
   <link rel="manifest" href="./manifest.json">
   <link rel="icon" type="image/jpeg" href="./assets/icon-192.jpg">
   <link rel="apple-touch-icon" href="./assets/icon-192.jpg">
-  
+
   <!-- Google Fonts: Plus Jakarta Sans -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet">
+
   <!-- Lucide Icons CDN -->
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
-  
+
   <!-- Stylesheet -->
   <link rel="stylesheet" href="./css/style.css">
 </head>
+
 <body>
 
   <!-- Desktop Presentation Controls (Optional Toggle for Phone Frame on PC) -->
@@ -43,10 +48,10 @@
 
   <!-- Outer Desktop Viewport Canvas -->
   <div class="desktop-viewport-canvas" id="viewport-canvas">
-    
+
     <!-- Smartphone Chassis Frame (Max 430px centered) -->
     <div class="mobile-device-frame" id="mobile-frame">
-      
+
       <!-- Native Mobile Status Bar Mockup -->
       <div class="mobile-status-bar">
         <span class="status-time" id="status-live-time">12:08</span>
@@ -67,7 +72,8 @@
             <div style="color:#94a3b8; font-size:10px;">Akses cepat saat dorong troli</div>
           </div>
         </div>
-        <button id="btn-install-pwa" class="cut-action-btn" style="background:#10b981; border-color:#059669;">Pasang</button>
+        <button id="btn-install-pwa" class="cut-action-btn"
+          style="background:#10b981; border-color:#059669;">Pasang</button>
       </div>
 
       <!-- Header Sesi Belanja (Context: Toko & Tanggal) -->
@@ -82,9 +88,18 @@
               <span class="brand-subtitle">Budget Safety Tracker</span>
             </div>
           </div>
-          <div class="session-badge-tag" id="session-status-badge">
-            <span class="pulse-dot" style="display:inline-block; width:6px; height:6px; border-radius:50%; background:#10b981;"></span>
-            <span>Troli Aktif</span>
+          <div class="header-badges-group" style="display:flex; align-items:center; gap:6px;">
+            <div class="session-badge-tag cloud-sync-badge" id="cloud-sync-badge"
+              title="Status Realtime Multi-Device HP ↔ PC">
+              <span class="pulse-dot" id="cloud-sync-dot"
+                style="display:inline-block; width:6px; height:6px; border-radius:50%; background:#10b981;"></span>
+              <span id="cloud-sync-text">Cloud Sync</span>
+            </div>
+            <div class="session-badge-tag" id="session-status-badge">
+              <span class="pulse-dot"
+                style="display:inline-block; width:6px; height:6px; border-radius:50%; background:#10b981;"></span>
+              <span>Troli Aktif</span>
+            </div>
           </div>
         </div>
 
@@ -97,7 +112,12 @@
             </label>
             <div class="styled-select-wrap">
               <select id="store-select" class="styled-select">
-                <!-- Dynamically populated, default "Lotte Mart Grocery - Puri Indah" -->
+                <option value="Lotte Mart Grocery - Puri Indah" selected>Lotte Mart Grocery - Puri Indah</option>
+                <option value="Super Indo - Meruya">Super Indo - Meruya</option>
+                <option value="Grand Lucky - SCBD">Grand Lucky - SCBD</option>
+                <option value="Hypermart - Puri Indah Mall">Hypermart - Puri Indah Mall</option>
+                <option value="Alfamidi Super - Kebon Jeruk">Alfamidi Super - Kebon Jeruk</option>
+                <option value="__ADD_NEW__">➕ Tambah Toko Baru...</option>
               </select>
               <span class="select-arrow">▼</span>
             </div>
@@ -109,7 +129,7 @@
               <span>Tanggal</span>
             </label>
             <div class="styled-date-wrap">
-              <input type="date" id="session-date-input" class="styled-date-input">
+              <input type="date" id="session-date-input" class="styled-date-input" value="2026-10-31">
             </div>
           </div>
         </div>
@@ -139,12 +159,13 @@
             <div class="budget-stat-grid">
               <div class="stat-item">
                 <span class="stat-title">Total Belanja</span>
-                <span class="stat-value" id="val-total-spent">Rp 0</span>
+                <span class="stat-value" id="val-total-spent">Rp 164.500</span>
               </div>
               <div class="stat-item" style="text-align: right;">
                 <span class="stat-title">Batas Dompet</span>
                 <span class="stat-value" id="val-budget-limit">Rp 500.000</span>
-                <button type="button" id="btn-edit-budget" class="stat-limit-btn" style="border:none; background:transparent; justify-content: flex-end;">
+                <button type="button" id="btn-edit-budget" class="stat-limit-btn"
+                  style="border:none; background:transparent; justify-content: flex-end;">
                   <i data-lucide="edit-3" style="width:10px; height:10px;"></i> Ubah Limit
                 </button>
               </div>
@@ -152,7 +173,7 @@
 
             <!-- Progress Safety Gauge Track -->
             <div class="budget-progress-track">
-              <div id="budget-progress-bar" class="budget-progress-fill" style="width: 0%;"></div>
+              <div id="budget-progress-bar" class="budget-progress-fill" style="width: 32.9%;"></div>
             </div>
 
             <!-- Note / Warning Message -->
@@ -176,22 +197,220 @@
                 <i data-lucide="shopping-bag" style="width:16px; height:16px; color:#10b981;"></i>
                 <span>Isi Troli Supermarket</span>
               </div>
-              <span class="item-counter-pill" id="cart-item-count">0 Item</span>
+              <span class="item-counter-pill" id="cart-item-count">6 Item (4 Jenis)</span>
             </div>
 
             <!-- Cart Items Container -->
             <div id="cart-items-list">
-              <!-- Dynamically populated cards -->
+              <!-- Item 1: Beras Ramos (F-04: Tanda Setara =) -->
+              <div class="grocery-item-card">
+                <div class="item-card-top">
+                  <div class="item-title-group">
+                    <div class="item-name">Beras Ramos 5kg</div>
+                    <div class="item-tags-row">
+                      <span class="category-tag">Bahan Pokok</span>
+                      <span class="category-tag">pack</span>
+                      <span class="price-comparator-badge badge-price-equal" title="Sama persis dengan riwayat lalu">
+                        <span>=</span>
+                        <span>Harga Stabil</span>
+                      </span>
+                    </div>
+                  </div>
+                  <div class="item-card-actions">
+                    <button type="button" class="card-action-icon edit-btn" title="Edit Item" data-id="cart-1">
+                      <i data-lucide="pencil" style="width:14px; height:14px;"></i>
+                    </button>
+                    <button type="button" class="card-action-icon trash trash-btn" title="Hapus dari Troli"
+                      data-id="cart-1">
+                      <i data-lucide="trash-2" style="width:14px; height:14px;"></i>
+                    </button>
+                  </div>
+                </div>
+                <div class="item-card-mid">
+                  <div class="price-details">
+                    <div class="unit-price-line">
+                      <span style="font-weight:700; color:#34d399;">Rp 68.000 / pack</span>
+                    </div>
+                    <div class="item-subtotal-val">Rp 68.000</div>
+                  </div>
+                  <div class="qty-stepper-control">
+                    <button type="button" class="stepper-btn minus-btn" data-id="cart-1">−</button>
+                    <input type="number" class="stepper-input cart-qty-input" data-id="cart-1" value="1" min="1"
+                      inputmode="numeric">
+                    <button type="button" class="stepper-btn plus-btn" data-id="cart-1">+</button>
+                  </div>
+                </div>
+                <div class="item-card-bottom">
+                  <span class="history-tooltip-text">Tercatat di Lotte Mart Grocery - Puri Indah</span>
+                </div>
+              </div>
+
+              <!-- Item 2: Minyak Goreng Tropical (F-03: Diskon Bertingkat 50% + 20%) -->
+              <div class="grocery-item-card">
+                <div class="item-card-top">
+                  <div class="item-title-group">
+                    <div class="item-name">Minyak Goreng Tropical 2L</div>
+                    <div class="item-tags-row">
+                      <span class="category-tag">Bahan Pokok</span>
+                      <span class="category-tag">liter</span>
+                    </div>
+                  </div>
+                  <div class="item-card-actions">
+                    <button type="button" class="card-action-icon edit-btn" title="Edit Item" data-id="cart-2">
+                      <i data-lucide="pencil" style="width:14px; height:14px;"></i>
+                    </button>
+                    <button type="button" class="card-action-icon trash trash-btn" title="Hapus dari Troli"
+                      data-id="cart-2">
+                      <i data-lucide="trash-2" style="width:14px; height:14px;"></i>
+                    </button>
+                  </div>
+                </div>
+                <div class="item-card-mid">
+                  <div class="price-details">
+                    <div class="unit-price-line">
+                      <span class="discount-ribbon">Diskon: 50% + 20%</span>
+                      <span class="original-price-strike">Rp 38.000</span>
+                      <span style="font-weight:700; color:#34d399;">Rp 15.200 / liter</span>
+                    </div>
+                    <div class="item-subtotal-val">Rp 30.400</div>
+                  </div>
+                  <div class="qty-stepper-control">
+                    <button type="button" class="stepper-btn minus-btn" data-id="cart-2">−</button>
+                    <input type="number" class="stepper-input cart-qty-input" data-id="cart-2" value="2" min="1"
+                      inputmode="numeric">
+                    <button type="button" class="stepper-btn plus-btn" data-id="cart-2">+</button>
+                  </div>
+                </div>
+                <div class="item-card-bottom">
+                  <span class="history-tooltip-text">Tercatat di Lotte Mart Grocery - Puri Indah</span>
+                  <span style="font-size:11px; color:#fbbf24; font-weight:700;">Hemat Rp 45.600</span>
+                </div>
+              </div>
+
+              <!-- Item 3: Telur Ayam Negeri 1kg (F-04: Panah Merah Naik ↑) -->
+              <div class="grocery-item-card">
+                <div class="item-card-top">
+                  <div class="item-title-group">
+                    <div class="item-name">Telur Ayam Negeri 1kg</div>
+                    <div class="item-tags-row">
+                      <span class="category-tag">Bahan Pokok</span>
+                      <span class="category-tag">kg</span>
+                      <span class="price-comparator-badge badge-price-up"
+                        title="Naik dibanding riwayat lalu (Rp 28.500)">
+                        <span>↑</span>
+                        <span>+Rp 2.500 (+8.8%)</span>
+                      </span>
+                    </div>
+                  </div>
+                  <div class="item-card-actions">
+                    <button type="button" class="card-action-icon edit-btn" title="Edit Item" data-id="cart-3">
+                      <i data-lucide="pencil" style="width:14px; height:14px;"></i>
+                    </button>
+                    <button type="button" class="card-action-icon trash trash-btn" title="Hapus dari Troli"
+                      data-id="cart-3">
+                      <i data-lucide="trash-2" style="width:14px; height:14px;"></i>
+                    </button>
+                  </div>
+                </div>
+                <div class="item-card-mid">
+                  <div class="price-details">
+                    <div class="unit-price-line">
+                      <span style="font-weight:700; color:#34d399;">Rp 31.000 / kg</span>
+                    </div>
+                    <div class="item-subtotal-val">Rp 31.000</div>
+                  </div>
+                  <div class="qty-stepper-control">
+                    <button type="button" class="stepper-btn minus-btn" data-id="cart-3">−</button>
+                    <input type="number" class="stepper-input cart-qty-input" data-id="cart-3" value="1" min="1"
+                      inputmode="numeric">
+                    <button type="button" class="stepper-btn plus-btn" data-id="cart-3">+</button>
+                  </div>
+                </div>
+                <div class="item-card-bottom">
+                  <span class="history-tooltip-text">Naik dibanding 28 Sep (Rp 28.500)</span>
+                </div>
+              </div>
+
+              <!-- Item 4: Ultra Milk Cokelat 1L (F-04: Panah Hijau Turun ↓) -->
+              <div class="grocery-item-card">
+                <div class="item-card-top">
+                  <div class="item-title-group">
+                    <div class="item-name">Ultra Milk Cokelat 1L</div>
+                    <div class="item-tags-row">
+                      <span class="category-tag">Minuman</span>
+                      <span class="category-tag">pcs</span>
+                      <span class="price-comparator-badge badge-price-down"
+                        title="PROMO! Lebih hemat vs riwayat lalu (Rp 21.000)">
+                        <span>↓</span>
+                        <span>-Rp 1.500 (7.1%)</span>
+                      </span>
+                    </div>
+                  </div>
+                  <div class="item-card-actions">
+                    <button type="button" class="card-action-icon edit-btn" title="Edit Item" data-id="cart-4">
+                      <i data-lucide="pencil" style="width:14px; height:14px;"></i>
+                    </button>
+                    <button type="button" class="card-action-icon trash trash-btn" title="Hapus dari Troli"
+                      data-id="cart-4">
+                      <i data-lucide="trash-2" style="width:14px; height:14px;"></i>
+                    </button>
+                  </div>
+                </div>
+                <div class="item-card-mid">
+                  <div class="price-details">
+                    <div class="unit-price-line">
+                      <span class="discount-ribbon">Diskon: 10%</span>
+                      <span class="original-price-strike">Rp 19.500</span>
+                      <span style="font-weight:700; color:#34d399;">Rp 17.550 / pcs</span>
+                    </div>
+                    <div class="item-subtotal-val">Rp 35.100</div>
+                  </div>
+                  <div class="qty-stepper-control">
+                    <button type="button" class="stepper-btn minus-btn" data-id="cart-4">−</button>
+                    <input type="number" class="stepper-input cart-qty-input" data-id="cart-4" value="2" min="1"
+                      inputmode="numeric">
+                    <button type="button" class="stepper-btn plus-btn" data-id="cart-4">+</button>
+                  </div>
+                </div>
+                <div class="item-card-bottom">
+                  <span class="history-tooltip-text">PROMO! Lebih hemat vs 28 Sep (Rp 21.000)</span>
+                  <span style="font-size:11px; color:#fbbf24; font-weight:700;">Hemat Rp 3.900</span>
+                </div>
+              </div>
             </div>
 
             <!-- Quick Add Suggestions for College / Boarding Students -->
             <div class="quick-add-section">
-              <div style="font-size:12px; font-weight:700; color:#94a3b8; margin-bottom:6px; display:flex; align-items:center; gap:6px;">
+              <div
+                style="font-size:12px; font-weight:700; color:#94a3b8; margin-bottom:6px; display:flex; align-items:center; gap:6px;">
                 <i data-lucide="sparkles" style="width:13px; height:13px; color:#fbbf24;"></i>
                 <span>Item Cepat Favorit Anak Rantau:</span>
               </div>
               <div class="quick-chips-scroll" id="quick-products-chips">
-                <!-- Dynamically populated quick items -->
+                <button type="button" class="quick-product-chip">
+                  <span class="quick-chip-name">Beras Ramos 5kg</span>
+                  <span class="quick-chip-price">Rp 68.000</span>
+                </button>
+                <button type="button" class="quick-product-chip">
+                  <span class="quick-chip-name">Minyak Goreng Tropical 2L</span>
+                  <span class="quick-chip-price">Rp 34.000</span>
+                </button>
+                <button type="button" class="quick-product-chip">
+                  <span class="quick-chip-name">Telur Ayam Negeri 1kg</span>
+                  <span class="quick-chip-price">Rp 28.500</span>
+                </button>
+                <button type="button" class="quick-product-chip">
+                  <span class="quick-chip-name">Indomie Goreng Special</span>
+                  <span class="quick-chip-price">Rp 115.000</span>
+                </button>
+                <button type="button" class="quick-product-chip">
+                  <span class="quick-chip-name">Ultra Milk Cokelat 1L</span>
+                  <span class="quick-chip-price">Rp 19.500</span>
+                </button>
+                <button type="button" class="quick-product-chip">
+                  <span class="quick-chip-name">Fiesta Chicken Nugget 500g</span>
+                  <span class="quick-chip-price">Rp 45.000</span>
+                </button>
               </div>
             </div>
           </section>
@@ -211,9 +430,11 @@
                 <span style="font-weight:700; font-size:14px;">Cek & Bandingkan Harga Lintas Toko</span>
               </div>
               <p style="font-size:11px; color:#94a3b8; margin-bottom:10px;">
-                Cari produk belanjaan untuk melihat perbandingan harga riwayat di berbagai supermarket (Lotte Mart, Super Indo, dsb.)
+                Cari produk belanjaan untuk melihat perbandingan harga riwayat di berbagai supermarket (Lotte Mart,
+                Super Indo, dsb.)
               </p>
-              <input type="text" id="cross-store-search" class="form-input-text" placeholder="Ketik nama: Beras, Minyak, Telur, Nugget..." style="height:40px; font-size:13px;">
+              <input type="text" id="cross-store-search" class="form-input-text"
+                placeholder="Ketik nama: Beras, Minyak, Telur, Nugget..." style="height:40px; font-size:13px;">
 
               <div id="cross-store-results" class="cross-store-price-table">
                 <!-- Populated on search -->
@@ -226,7 +447,8 @@
                 <i data-lucide="receipt" style="width:16px; height:16px; color:#10b981;"></i>
                 <span>Riwayat Sesi Belanja Lampau</span>
               </div>
-              <button id="btn-export-data" style="background:transparent; border:none; color:#10b981; font-size:12px; font-weight:700; cursor:pointer;">
+              <button id="btn-export-data"
+                style="background:transparent; border:none; color:#10b981; font-size:12px; font-weight:700; cursor:pointer;">
                 Backup / JSON
               </button>
             </div>
@@ -257,7 +479,8 @@
 
               <div class="form-group" style="margin-top:12px;">
                 <label class="form-label">Pagu Maksimal Belanja (Rp)</label>
-                <input type="text" inputmode="numeric" id="input-budget-cap" class="form-input-numeric" value="Rp 500.000">
+                <input type="text" inputmode="numeric" id="input-budget-cap" class="form-input-numeric"
+                  value="Rp 500.000">
               </div>
 
               <!-- Quick Presets -->
@@ -268,7 +491,8 @@
                 <button type="button" class="preset-budget-btn" data-val="1000000">1 Jt</button>
               </div>
 
-              <button id="btn-save-budget-cap" class="btn-submit-item" style="height:44px; font-size:14px; margin-top:4px;">
+              <button id="btn-save-budget-cap" class="btn-submit-item"
+                style="height:44px; font-size:14px; margin-top:4px;">
                 Simpan Batas Anggaran
               </button>
             </div>
@@ -299,7 +523,8 @@
                 <li>✅ <strong>F-06</strong>: Riwayat Sesi & Database Multi-Toko</li>
               </ul>
               <div style="margin-top:12px; text-align:center;">
-                <button id="btn-reset-data" style="background:rgba(244,63,94,0.15); border:1px solid rgba(244,63,94,0.3); color:#fda4af; padding:6px 12px; border-radius:8px; font-size:11px; font-weight:700; cursor:pointer;">
+                <button id="btn-reset-data"
+                  style="background:rgba(244,63,94,0.15); border:1px solid rgba(244,63,94,0.3); color:#fda4af; padding:6px 12px; border-radius:8px; font-size:11px; font-weight:700; cursor:pointer;">
                   Muat Ulang Data Uji Default
                 </button>
               </div>
@@ -353,7 +578,7 @@
       <div id="item-modal-overlay" class="modal-overlay">
         <div class="bottom-sheet-content">
           <div class="sheet-handle-bar"></div>
-          
+
           <div class="sheet-header">
             <h2 id="modal-title">Tambah Belanjaan</h2>
             <button id="btn-close-modal" class="sheet-close-btn" type="button">✕</button>
@@ -365,7 +590,8 @@
             <!-- F-01: Nama Produk -->
             <div class="form-group">
               <label class="form-label" for="input-item-name">Nama Produk</label>
-              <input type="text" id="input-item-name" class="form-input-text" placeholder="Contoh: Beras Ramos 5kg, Minyak 2L..." required>
+              <input type="text" id="input-item-name" class="form-input-text"
+                placeholder="Contoh: Beras Ramos 5kg, Minyak 2L..." required>
             </div>
 
             <!-- F-04: Realtime Comparator Feedback in Modal! -->
@@ -411,9 +637,12 @@
               <div class="form-group">
                 <label class="form-label">Kuantitas (Qty)</label>
                 <div class="qty-stepper-control" style="height:48px;">
-                  <button type="button" id="modal-qty-minus" class="stepper-btn minus-btn" style="width:48px; font-size:22px;">−</button>
-                  <input type="number" id="input-item-qty" class="stepper-input" value="1" min="1" inputmode="numeric" style="flex:1; font-size:18px;">
-                  <button type="button" id="modal-qty-plus" class="stepper-btn plus-btn" style="width:48px; font-size:22px;">+</button>
+                  <button type="button" id="modal-qty-minus" class="stepper-btn minus-btn"
+                    style="width:48px; font-size:22px;">−</button>
+                  <input type="number" id="input-item-qty" class="stepper-input" value="1" min="1" inputmode="numeric"
+                    style="flex:1; font-size:18px;">
+                  <button type="button" id="modal-qty-plus" class="stepper-btn plus-btn"
+                    style="width:48px; font-size:22px;">+</button>
                 </div>
               </div>
             </div>
@@ -421,13 +650,14 @@
             <!-- F-01 & Ergonomi: Harga Satuan (Numeric Keyboard) -->
             <div class="form-group">
               <label class="form-label" for="input-item-price">Harga Satuan Asli (Rp)</label>
-              <input type="text" id="input-item-price" class="form-input-numeric" placeholder="Rp 0" inputmode="numeric" required>
+              <input type="text" id="input-item-price" class="form-input-numeric" placeholder="Rp 0" inputmode="numeric"
+                required>
             </div>
 
             <!-- F-03: Kalkulator Diskon Bertingkat (50% + 20%, 30%+10%, dsb.) -->
             <div class="form-group">
               <label class="form-label">Diskon / Promo (Tunggal atau Bertingkat)</label>
-              
+
               <!-- Quick Preset Chips for Multi-tier Discounts -->
               <div class="discount-chips-container" id="discount-preset-chips">
                 <button type="button" class="discount-chip active" data-val="0">Tanpa Diskon</button>
@@ -441,7 +671,9 @@
               </div>
 
               <!-- Custom discount string input -->
-              <input type="text" id="input-item-discount" class="form-input-text" placeholder="Ketik custom misal: 25% atau 50+20 atau Rp 5000" style="height:40px; font-size:13px;" value="0">
+              <input type="text" id="input-item-discount" class="form-input-text"
+                placeholder="Ketik custom misal: 25% atau 50+20 atau Rp 5000" style="height:40px; font-size:13px;"
+                value="0">
 
               <!-- Live Formula & Savings Calculation Box -->
               <div id="discount-preview-box" class="discount-live-calculation-box" style="display:none;">
@@ -451,7 +683,8 @@
             </div>
 
             <!-- Live Total Preview Before Adding -->
-            <div style="background:rgba(0,0,0,0.3); border-radius:12px; padding:12px 14px; display:flex; justify-content:space-between; align-items:center; margin:10px 0;">
+            <div
+              style="background:rgba(0,0,0,0.3); border-radius:12px; padding:12px 14px; display:flex; justify-content:space-between; align-items:center; margin:10px 0;">
               <div>
                 <div style="font-size:11px; color:#94a3b8;">Subtotal Item Ini:</div>
                 <div id="modal-live-subtotal" style="font-size:18px; font-weight:800; color:#34d399;">Rp 0</div>
@@ -505,11 +738,13 @@
 
           <div class="form-group">
             <label class="form-label">Catatan Sesi (Opsional)</label>
-            <input type="text" id="finish-session-notes" class="form-input-text" placeholder="Contoh: Belanja Bulanan Anak Rantau Hemat">
+            <input type="text" id="finish-session-notes" class="form-input-text"
+              placeholder="Contoh: Belanja Bulanan Anak Rantau Hemat">
           </div>
 
           <p style="font-size:11px; color:#94a3b8; margin-bottom:14px; line-height:1.4;">
-            💾 Data sesi belanja dan harga produk di toko ini akan disimpan ke database riwayat untuk menjadi pembanding resmi pada belanja bulan berikutnya.
+            💾 Data sesi belanja dan harga produk di toko ini akan disimpan ke database riwayat untuk menjadi pembanding
+            resmi pada belanja bulan berikutnya.
           </p>
 
           <button id="btn-confirm-save-session" class="btn-submit-item">
@@ -531,7 +766,8 @@
           <form id="new-store-form">
             <div class="form-group">
               <label class="form-label">Nama Supermarket / Pasar</label>
-              <input type="text" id="input-new-store-name" class="form-input-text" placeholder="Contoh: Lotte Mart Kelapa Gading..." required>
+              <input type="text" id="input-new-store-name" class="form-input-text"
+                placeholder="Contoh: Lotte Mart Kelapa Gading..." required>
             </div>
             <div class="form-group">
               <label class="form-label">Wilayah / Cabang</label>
@@ -545,8 +781,13 @@
     </div>
   </div>
 
-  <!-- Main Application Script (ES Module) -->
-  <script type="module" src="./js/app.js"></script>
+  <!-- Firebase Compat SDK (Works on both direct file:/// and http://) -->
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+
+  <!-- Main Application Script (Self-contained, 100% compatible with file:/// and http://) -->
+  <script src="./js/app.js"></script>
 
 </body>
+
 </html>
