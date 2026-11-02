@@ -138,13 +138,15 @@ export function compareWithStoreHistory(storeName, productName, currentPrice) {
   const diffPercent = prevPrice > 0 ? Math.round(((diff / prevPrice) * 100) * 10) / 10 : 0;
   const formattedDate = hist.date ? new Date(hist.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : 'riwayat lalu';
 
+  const periodLabel = hist.inSameStore ? 'bulan lalu' : (hist.storeName || 'toko lain');
+
   if (diff > 0) {
     return {
       status: 'UP',
-      symbol: '↑',
+      symbol: '\u2191',
       badgeClass: 'badge-price-up',
-      label: `+${CurrencyUtils.formatRupiah(diff)} (${diffPercent > 0 ? '+' : ''}${diffPercent}%)`,
-      desc: `Naik dibanding ${formattedDate} (${CurrencyUtils.formatRupiah(prevPrice)})`,
+      label: `+${CurrencyUtils.formatRupiah(diff)}`,
+      desc: `Naik dibanding ${periodLabel} (${CurrencyUtils.formatRupiah(prevPrice)})`,
       diff: diff,
       diffPercent: diffPercent,
       historicalPrice: prevPrice,
@@ -155,10 +157,10 @@ export function compareWithStoreHistory(storeName, productName, currentPrice) {
   } else if (diff < 0) {
     return {
       status: 'DOWN',
-      symbol: '↓',
+      symbol: '\u2193',
       badgeClass: 'badge-price-down',
-      label: `-${CurrencyUtils.formatRupiah(Math.abs(diff))} (${diffPercent}%)`,
-      desc: `PROMO! Lebih hemat vs ${formattedDate} (${CurrencyUtils.formatRupiah(prevPrice)})`,
+      label: `-${CurrencyUtils.formatRupiah(Math.abs(diff))}`,
+      desc: `PROMO! Lebih hemat vs ${periodLabel} (${CurrencyUtils.formatRupiah(prevPrice)})`,
       diff: diff,
       diffPercent: diffPercent,
       historicalPrice: prevPrice,
@@ -171,8 +173,8 @@ export function compareWithStoreHistory(storeName, productName, currentPrice) {
       status: 'EQUAL',
       symbol: '=',
       badgeClass: 'badge-price-equal',
-      label: 'Harga Stabil',
-      desc: `Sama persis dengan ${formattedDate} (${CurrencyUtils.formatRupiah(prevPrice)})`,
+      label: 'Harga Tetap Stabil',
+      desc: `Sama persis dengan ${periodLabel} (${CurrencyUtils.formatRupiah(prevPrice)})`,
       diff: 0,
       diffPercent: 0,
       historicalPrice: prevPrice,

@@ -104,10 +104,10 @@ function calculateMultiTierDiscount(originalPrice, discountInput) {
 // 3. STORAGE & DATABASE LAYER (F-01, F-06, Multi-Store History)
 // ============================================================================
 const STORAGE_KEYS = {
-  CURRENT_CART: 'smart_grocery_cart_v2',
-  SESSION_META: 'smart_grocery_session_meta_v2',
+  CURRENT_CART: 'smart_grocery_cart_v3',
+  SESSION_META: 'smart_grocery_session_meta_v3',
   STORES: 'smart_grocery_stores_v1',
-  SESSIONS_HISTORY: 'smart_grocery_history_v2',
+  SESSIONS_HISTORY: 'smart_grocery_history_v3',
   PRICE_DB: 'smart_grocery_price_db_v1',
   USER_BUDGET: 'smart_grocery_budget_v1'
 };
@@ -237,6 +237,17 @@ const QUICK_PRODUCTS = [
 const StorageService = {
   _syncCallback: null,
   _isApplyingRemote: false,
+  currentUserId: null,
+
+  setCurrentUser(uid) {
+    this.currentUserId = uid;
+    this.init();
+  },
+
+  getUserKey(baseKey) {
+    const uid = this.currentUserId || 'local_user';
+    return `${baseKey}_${uid}`;
+  },
 
   setSyncCallback(callback) {
     this._syncCallback = callback;
@@ -265,23 +276,36 @@ const StorageService = {
       if (!localStorage.getItem(STORAGE_KEYS.STORES)) {
         localStorage.setItem(STORAGE_KEYS.STORES, JSON.stringify(DEFAULT_STORES));
       }
-      if (!localStorage.getItem(STORAGE_KEYS.SESSIONS_HISTORY)) {
-        localStorage.setItem(STORAGE_KEYS.SESSIONS_HISTORY, JSON.stringify(SEED_SESSIONS));
+      const histKey = this.getUserKey(STORAGE_KEYS.SESSIONS_HISTORY);
+      if (!localStorage.getItem(histKey)) {
+        localStorage.setItem(histKey, JSON.stringify(SEED_SESSIONS));
       }
-      if (!localStorage.getItem(STORAGE_KEYS.USER_BUDGET)) {
-        localStorage.setItem(STORAGE_KEYS.USER_BUDGET, '500000');
+      const budgetKey = this.getUserKey(STORAGE_KEYS.USER_BUDGET);
+      if (!localStorage.getItem(budgetKey)) {
+        localStorage.setItem(budgetKey, '500000');
       }
-      if (!localStorage.getItem(STORAGE_KEYS.CURRENT_CART)) {
-        localStorage.setItem(STORAGE_KEYS.CURRENT_CART, JSON.stringify(SEED_ACTIVE_CART));
+      const cartKey = this.getUserKey(STORAGE_KEYS.CURRENT_CART);
+      if (!localStorage.getItem(cartKey)) {
+        localStorage.setItem(cartKey, JSON.stringify(SEED_ACTIVE_CART));
       }
-      if (!localStorage.getItem(STORAGE_KEYS.SESSION_META)) {
+      const metaKey = this.getUserKey(STORAGE_KEYS.SESSION_META);
+      if (!localStorage.getItem(metaKey)) {
         const today = new Date().toISOString().split('T')[0];
         const defaultMeta = {
           storeName: 'Lotte Mart Grocery - Puri Indah',
           date: today,
           notes: 'Sesi Belanja Bulanan Anak Rantau'
         };
-        localStorage.setItem(STORAGE_KEYS.SESSION_META, JSON.stringify(defaultMeta));
+        localStorage.setItem(metaKey, JSON.stringify(defaultMeta));
+      }
+      const catBudgetKey = this.getUserKey('smart_grocery_cat_budgets');
+      if (!localStorage.getItem(catBudgetKey)) {
+        const defaultCatBudgets = [
+          { id: 'cat-b-1', name: 'Bahan Pokok', limit: 250000 },
+          { id: 'cat-b-2', name: 'Camilan & Minuman', limit: 75000 },
+          { id: 'cat-b-3', name: 'Mandi & Cuci', limit: 100000 }
+        ];
+        localStorage.setItem(catBudgetKey, JSON.stringify(defaultCatBudgets));
       }
     } catch (e) {
       console.warn('LocalStorage access warning:', e);
@@ -333,7 +357,7 @@ const StorageService = {
 
   getSessionMeta() {
     try {
-      const data = localStorage.getItem(STORAGE_KEYS.SESSION_META);
+      const data = localStorage.getItem(this.getUserKey(STORAGE_KEYS.SESSION_META));
       if (data) return JSON.parse(data);
     } catch (e) {}
     const today = new Date().toISOString().split('T')[0];
@@ -346,14 +370,14 @@ const StorageService = {
 
   saveSessionMeta(meta) {
     try {
-      localStorage.setItem(STORAGE_KEYS.SESSION_META, JSON.stringify(meta));
+      localStorage.setItem(this.getUserKey(STORAGE_KEYS.SESSION_META), JSON.stringify(meta));
     } catch (e) {}
     this.notifyChange('meta', meta);
   },
 
   getCart() {
     try {
-      const data = localStorage.getItem(STORAGE_KEYS.CURRENT_CART);
+      const data = localStorage.getItem(this.getUserKey(STORAGE_KEYS.CURRENT_CART));
       return data ? JSON.parse(data) : SEED_ACTIVE_CART;
     } catch {
       return SEED_ACTIVE_CART;
@@ -362,14 +386,14 @@ const StorageService = {
 
   saveCart(cart) {
     try {
-      localStorage.setItem(STORAGE_KEYS.CURRENT_CART, JSON.stringify(cart));
+      localStorage.setItem(this.getUserKey(STORAGE_KEYS.CURRENT_CART), JSON.stringify(cart));
     } catch (e) {}
     this.notifyChange('cart', cart);
   },
 
   getBudget() {
     try {
-      const b = localStorage.getItem(STORAGE_KEYS.USER_BUDGET);
+      const b = localStorage.getItem(this.getUserKey(STORAGE_KEYS.USER_BUDGET));
       return b ? parseInt(b, 10) : 500000;
     } catch {
       return 500000;
@@ -378,14 +402,63 @@ const StorageService = {
 
   saveBudget(budget) {
     try {
-      localStorage.setItem(STORAGE_KEYS.USER_BUDGET, budget.toString());
+      localStorage.setItem(this.getUserKey(STORAGE_KEYS.USER_BUDGET), budget.toString());
     } catch (e) {}
-    this.notifyChange('budget', budget);
+    this.notifyChange('budget', { walletLimit: budget, categoryBudgets: this.getCategoryBudgets() });
+  },
+
+  getCategoryBudgets() {
+    try {
+      const data = localStorage.getItem(this.getUserKey('smart_grocery_cat_budgets'));
+      if (data) return JSON.parse(data);
+    } catch (e) {}
+    return [
+      { id: 'cat-b-1', name: 'Bahan Pokok', limit: 250000 },
+      { id: 'cat-b-2', name: 'Camilan & Minuman', limit: 75000 },
+      { id: 'cat-b-3', name: 'Mandi & Cuci', limit: 100000 }
+    ];
+  },
+
+  saveCategoryBudgets(budgets) {
+    try {
+      localStorage.setItem(this.getUserKey('smart_grocery_cat_budgets'), JSON.stringify(budgets));
+    } catch (e) {}
+    this.notifyChange('budget', { walletLimit: this.getBudget(), categoryBudgets: budgets });
+  },
+
+  addCategoryBudget(item) {
+    const list = this.getCategoryBudgets();
+    const newItem = {
+      id: 'cat-b-' + Date.now(),
+      name: item.name.trim(),
+      limit: Number(item.limit) || 100000
+    };
+    list.push(newItem);
+    this.saveCategoryBudgets(list);
+    return newItem;
+  },
+
+  updateCategoryBudget(id, updateData) {
+    const list = this.getCategoryBudgets();
+    const target = list.find(c => c.id === id);
+    if (target) {
+      if (updateData.name) target.name = updateData.name.trim();
+      if (updateData.limit) target.limit = Number(updateData.limit) || target.limit;
+      this.saveCategoryBudgets(list);
+    }
+    return target;
+  },
+
+  deleteCategoryBudget(id) {
+    let list = this.getCategoryBudgets();
+    list = list.filter(c => c.id !== id);
+    this.saveCategoryBudgets(list);
+    return list;
   },
 
   getHistorySessions() {
     try {
-      const data = localStorage.getItem(STORAGE_KEYS.SESSIONS_HISTORY);
+      const data = localStorage.getItem(this.getUserKey(STORAGE_KEYS.SESSIONS_HISTORY));
       return data ? JSON.parse(data) : SEED_SESSIONS;
     } catch {
       return SEED_SESSIONS;
@@ -398,9 +471,19 @@ const StorageService = {
       history.unshift(session);
     }
     try {
-      localStorage.setItem(STORAGE_KEYS.SESSIONS_HISTORY, JSON.stringify(history));
+      localStorage.setItem(this.getUserKey(STORAGE_KEYS.SESSIONS_HISTORY), JSON.stringify(history));
     } catch (e) {}
     this.notifyChange('history', session);
+    return history;
+  },
+
+  deleteHistorySession(sessionId) {
+    let history = this.getHistorySessions();
+    history = history.filter(h => h.id !== sessionId);
+    try {
+      localStorage.setItem(this.getUserKey(STORAGE_KEYS.SESSIONS_HISTORY), JSON.stringify(history));
+    } catch (e) {}
+    this.notifyChange('history_delete', { id: sessionId });
     return history;
   },
 
@@ -412,7 +495,7 @@ const StorageService = {
     remoteSessions.forEach(s => map.set(s.id, s));
     const merged = Array.from(map.values()).sort((a, b) => new Date(b.savedAt || b.date) - new Date(a.savedAt || a.date));
     try {
-      localStorage.setItem(STORAGE_KEYS.SESSIONS_HISTORY, JSON.stringify(merged));
+      localStorage.setItem(this.getUserKey(STORAGE_KEYS.SESSIONS_HISTORY), JSON.stringify(merged));
     } catch (e) {}
     return merged;
   },
@@ -470,11 +553,11 @@ const StorageService = {
   resetToDefault() {
     try {
       localStorage.setItem(STORAGE_KEYS.STORES, JSON.stringify(DEFAULT_STORES));
-      localStorage.setItem(STORAGE_KEYS.SESSIONS_HISTORY, JSON.stringify(SEED_SESSIONS));
-      localStorage.setItem(STORAGE_KEYS.CURRENT_CART, JSON.stringify(SEED_ACTIVE_CART));
-      localStorage.setItem(STORAGE_KEYS.USER_BUDGET, '500000');
+      localStorage.setItem(this.getUserKey(STORAGE_KEYS.SESSIONS_HISTORY), JSON.stringify(SEED_SESSIONS));
+      localStorage.setItem(this.getUserKey(STORAGE_KEYS.CURRENT_CART), JSON.stringify(SEED_ACTIVE_CART));
+      localStorage.setItem(this.getUserKey(STORAGE_KEYS.USER_BUDGET), '500000');
       const today = new Date().toISOString().split('T')[0];
-      localStorage.setItem(STORAGE_KEYS.SESSION_META, JSON.stringify({
+      localStorage.setItem(this.getUserKey(STORAGE_KEYS.SESSION_META), JSON.stringify({
         storeName: 'Lotte Mart Grocery - Puri Indah',
         date: today,
         notes: 'Sesi Belanja Bulanan Anak Rantau'
@@ -497,7 +580,7 @@ function compareWithStoreHistory(storeName, productName, currentPrice) {
   if (!hist || !hist.found) {
     return {
       status: 'NEW',
-      symbol: '✨',
+      symbol: '\u2728',
       badgeClass: 'badge-new',
       label: 'Produk Baru',
       desc: 'Belum ada riwayat di toko ini',
@@ -511,15 +594,15 @@ function compareWithStoreHistory(storeName, productName, currentPrice) {
   const prevPrice = hist.price;
   const diff = numPrice - prevPrice;
   const diffPercent = prevPrice > 0 ? Math.round(((diff / prevPrice) * 100) * 10) / 10 : 0;
-  const formattedDate = hist.date ? new Date(hist.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : 'riwayat lalu';
+  const periodLabel = hist.inSameStore ? 'bulan lalu' : (hist.storeName || 'toko lain');
 
   if (diff > 0) {
     return {
       status: 'UP',
-      symbol: '↑',
+      symbol: '\u2191',
       badgeClass: 'badge-price-up',
-      label: `+${CurrencyUtils.formatRupiah(diff)} (${diffPercent > 0 ? '+' : ''}${diffPercent}%)`,
-      desc: `Naik dibanding ${formattedDate} (${CurrencyUtils.formatRupiah(prevPrice)})`,
+      label: `+${CurrencyUtils.formatRupiah(diff)}`,
+      desc: `Naik dibanding ${periodLabel} (${CurrencyUtils.formatRupiah(prevPrice)})`,
       diff: diff,
       diffPercent: diffPercent,
       historicalPrice: prevPrice,
@@ -530,10 +613,10 @@ function compareWithStoreHistory(storeName, productName, currentPrice) {
   } else if (diff < 0) {
     return {
       status: 'DOWN',
-      symbol: '↓',
+      symbol: '\u2193',
       badgeClass: 'badge-price-down',
-      label: `-${CurrencyUtils.formatRupiah(Math.abs(diff))} (${diffPercent}%)`,
-      desc: `PROMO! Lebih hemat vs ${formattedDate} (${CurrencyUtils.formatRupiah(prevPrice)})`,
+      label: `-${CurrencyUtils.formatRupiah(Math.abs(diff))}`,
+      desc: `PROMO! Lebih hemat vs ${periodLabel} (${CurrencyUtils.formatRupiah(prevPrice)})`,
       diff: diff,
       diffPercent: diffPercent,
       historicalPrice: prevPrice,
@@ -547,7 +630,7 @@ function compareWithStoreHistory(storeName, productName, currentPrice) {
       symbol: '=',
       badgeClass: 'badge-price-equal',
       label: 'Harga Tetap Stabil',
-      desc: `Sama persis dengan ${formattedDate} (${CurrencyUtils.formatRupiah(prevPrice)})`,
+      desc: `Sama persis dengan ${periodLabel} (${CurrencyUtils.formatRupiah(prevPrice)})`,
       diff: 0,
       diffPercent: 0,
       historicalPrice: prevPrice,
@@ -944,6 +1027,10 @@ const HistoryService = {
     return results;
   },
 
+  deleteSession(sessionId) {
+    return StorageService.deleteHistorySession(sessionId);
+  },
+
   exportData() {
     const data = {
       version: '1.0',
@@ -963,6 +1050,7 @@ const HistoryService = {
 // ============================================================================
 const FirebaseSync = {
   db: null,
+  auth: null,
   isInitialized: false,
 
   config: {
@@ -986,7 +1074,7 @@ const FirebaseSync = {
   },
 
   getDeviceType() {
-    return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ? 'HP' : 'PC';
+    return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ? 'HP' : 'Laptop/PC';
   },
 
   init() {
@@ -996,10 +1084,15 @@ const FirebaseSync = {
         if (!firebase.apps.length) {
           firebase.initializeApp(this.config);
         }
-        this.db = firebase.firestore();
-        try {
-          this.db.enablePersistence({ synchronizeTabs: true }).catch(() => {});
-        } catch (e) {}
+        if (typeof firebase.auth === 'function') {
+          this.auth = firebase.auth();
+        }
+        if (typeof firebase.firestore === 'function') {
+          this.db = firebase.firestore();
+          try {
+            this.db.enablePersistence({ synchronizeTabs: true }).catch(() => {});
+          } catch (e) {}
+        }
         this.isInitialized = true;
         return true;
       }
@@ -1009,49 +1102,69 @@ const FirebaseSync = {
     return false;
   },
 
-  subscribeActiveTrolley(onUpdateCallback, onStatusCallback) {
-    if (!this.init()) {
+  onAuthChange(callback) {
+    if (!this.init() || !this.auth) return () => {};
+    return this.auth.onAuthStateChanged(callback);
+  },
+
+  login(email, password) {
+    if (!this.init() || !this.auth) return Promise.reject(new Error('Firebase Auth belum siap. Gunakan Mode Tamu.'));
+    return this.auth.signInWithEmailAndPassword(email, password);
+  },
+
+  register(email, password) {
+    if (!this.init() || !this.auth) return Promise.reject(new Error('Firebase Auth belum siap. Gunakan Mode Tamu.'));
+    return this.auth.createUserWithEmailAndPassword(email, password);
+  },
+
+  logout() {
+    if (!this.init() || !this.auth) return Promise.resolve();
+    return this.auth.signOut();
+  },
+
+  subscribeActiveTrolley(uid, onUpdateCallback, onStatusCallback) {
+    if (!this.init() || !this.db || !uid) {
       if (onStatusCallback) onStatusCallback({ online: false, status: 'offline' });
       return () => {};
     }
 
     const myId = this.getDeviceId();
     try {
-      return this.db.collection('trolley_sessions').doc('active_cart')
-        .onSnapshot({ includeMetadataChanges: true }, (doc) => {
-          const fromCache = doc.metadata.fromCache;
-          const hasPendingWrites = doc.metadata.hasPendingWrites;
+      const docRef = this.db.collection('users').doc(uid).collection('trolley').doc('active');
+      return docRef.onSnapshot({ includeMetadataChanges: true }, (doc) => {
+        const fromCache = doc.metadata.fromCache;
+        const hasPendingWrites = doc.metadata.hasPendingWrites;
 
-          if (onStatusCallback) {
-            onStatusCallback({
-              online: !fromCache,
-              hasPendingWrites,
-              status: fromCache ? 'cache' : 'connected'
-            });
-          }
+        if (onStatusCallback) {
+          onStatusCallback({
+            online: !fromCache,
+            hasPendingWrites,
+            status: fromCache ? 'cache' : 'connected'
+          });
+        }
 
-          if (doc.exists) {
-            const data = doc.data();
-            onUpdateCallback(data, {
-              fromCache,
-              hasPendingWrites,
-              isFromMe: data.lastDeviceId === myId
-            });
-          } else {
-            onUpdateCallback(null, { notFound: true, fromCache });
-          }
-        }, (err) => {
-          console.warn('Firestore active_cart snapshot notice:', err);
-          if (onStatusCallback) onStatusCallback({ online: false, status: 'error' });
-        });
+        if (doc.exists) {
+          const data = doc.data();
+          onUpdateCallback(data, {
+            fromCache,
+            hasPendingWrites,
+            isFromMe: data.lastDeviceId === myId
+          });
+        } else {
+          onUpdateCallback(null, { notFound: true, fromCache });
+        }
+      }, (err) => {
+        console.warn('Firestore active_cart snapshot notice:', err);
+        if (onStatusCallback) onStatusCallback({ online: false, status: 'error' });
+      });
     } catch (e) {
       console.warn('subscribeActiveTrolley warning:', e);
       return () => {};
     }
   },
 
-  syncActiveTrolley(payload) {
-    if (!this.init()) return Promise.resolve(false);
+  syncActiveTrolley(uid, payload) {
+    if (!this.init() || !this.db || !uid) return Promise.resolve(false);
     try {
       const cleanPayload = {
         storeLocation: payload.storeLocation || 'Lotte Mart Grocery - Puri Indah',
@@ -1066,7 +1179,8 @@ const FirebaseSync = {
         lastDeviceId: this.getDeviceId(),
         lastDeviceType: this.getDeviceType()
       };
-      return this.db.collection('trolley_sessions').doc('active_cart').set(cleanPayload, { merge: true })
+      return this.db.collection('users').doc(uid).collection('trolley').doc('active')
+        .set(cleanPayload, { merge: true })
         .then(() => true)
         .catch(() => false);
     } catch (e) {
@@ -1074,25 +1188,59 @@ const FirebaseSync = {
     }
   },
 
-  subscribeHistory(onUpdateCallback) {
-    if (!this.init()) return () => {};
+  subscribeBudget(uid, onUpdateCallback) {
+    if (!this.init() || !this.db || !uid) return () => {};
     try {
-      return this.db.collection('history_sessions').onSnapshot((snapshot) => {
-        const list = [];
-        snapshot.forEach(d => list.push({ ...d.data(), id: d.id }));
-        list.sort((a, b) => new Date(b.savedAt || b.date) - new Date(a.savedAt || a.date));
-        onUpdateCallback(list);
-      }, () => {});
+      return this.db.collection('users').doc(uid).collection('budget').doc('current')
+        .onSnapshot((doc) => {
+          if (doc.exists) {
+            onUpdateCallback(doc.data());
+          }
+        }, () => {});
     } catch (e) {
       return () => {};
     }
   },
 
-  saveHistory(session) {
-    if (!this.init()) return Promise.resolve(false);
+  syncBudget(uid, payload) {
+    if (!this.init() || !this.db || !uid) return Promise.resolve(false);
+    try {
+      const cleanPayload = {
+        walletLimit: Number(payload.walletLimit) || 500000,
+        categoryBudgets: Array.isArray(payload.categoryBudgets) ? payload.categoryBudgets : [],
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        lastDeviceId: this.getDeviceId(),
+        lastDeviceType: this.getDeviceType()
+      };
+      return this.db.collection('users').doc(uid).collection('budget').doc('current')
+        .set(cleanPayload, { merge: true })
+        .then(() => true)
+        .catch(() => false);
+    } catch (e) {
+      return Promise.resolve(false);
+    }
+  },
+
+  subscribeHistory(uid, onUpdateCallback) {
+    if (!this.init() || !this.db || !uid) return () => {};
+    try {
+      return this.db.collection('users').doc(uid).collection('history')
+        .onSnapshot((snapshot) => {
+          const list = [];
+          snapshot.forEach(d => list.push({ ...d.data(), id: d.id }));
+          list.sort((a, b) => new Date(b.savedAt || b.date) - new Date(a.savedAt || a.date));
+          onUpdateCallback(list);
+        }, () => {});
+    } catch (e) {
+      return () => {};
+    }
+  },
+
+  saveHistory(uid, session) {
+    if (!this.init() || !this.db || !uid) return Promise.resolve(false);
     try {
       const id = session.id || ('session-' + Date.now());
-      return this.db.collection('history_sessions').doc(id).set({
+      return this.db.collection('users').doc(uid).collection('history').doc(id).set({
         ...session,
         savedAt: session.savedAt || new Date().toISOString(),
         lastDeviceId: this.getDeviceId(),
@@ -1103,8 +1251,18 @@ const FirebaseSync = {
     }
   },
 
+  deleteHistory(uid, sessionId) {
+    if (!this.init() || !this.db || !uid) return Promise.resolve(false);
+    try {
+      return this.db.collection('users').doc(uid).collection('history').doc(sessionId).delete()
+        .then(() => true).catch(() => false);
+    } catch (e) {
+      return Promise.resolve(false);
+    }
+  },
+
   subscribeStores(onUpdateCallback) {
-    if (!this.init()) return () => {};
+    if (!this.init() || !this.db) return () => {};
     try {
       return this.db.collection('app_metadata').doc('stores').onSnapshot((doc) => {
         if (doc.exists) {
@@ -1120,7 +1278,7 @@ const FirebaseSync = {
   },
 
   syncStores(stores) {
-    if (!this.init()) return Promise.resolve(false);
+    if (!this.init() || !this.db) return Promise.resolve(false);
     try {
       return this.db.collection('app_metadata').doc('stores').set({
         stores,
@@ -1414,8 +1572,8 @@ function renderCart() {
     const card = document.createElement('div');
     card.className = 'grocery-item-card';
 
-    // F-04 Comparison Tag
-    const comp = item.comparison || compareWithStoreHistory(cartManager.getStoreName(), item.name, item.originalPrice);
+    // F-04 Comparison Tag (Always recalculate against currently selected store)
+    const comp = compareWithStoreHistory(cartManager.getStoreName(), item.name, item.originalPrice);
     let compBadgeHtml = '';
 
     if (comp && comp.status !== 'NONE') {

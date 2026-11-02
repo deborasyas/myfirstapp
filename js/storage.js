@@ -5,10 +5,10 @@
  */
 
 const STORAGE_KEYS = {
-  CURRENT_CART: 'smart_grocery_cart_v1',
-  SESSION_META: 'smart_grocery_session_meta_v1',
+  CURRENT_CART: 'smart_grocery_cart_v3',
+  SESSION_META: 'smart_grocery_session_meta_v3',
   STORES: 'smart_grocery_stores_v1',
-  SESSIONS_HISTORY: 'smart_grocery_history_v1',
+  SESSIONS_HISTORY: 'smart_grocery_history_v3',
   PRICE_DB: 'smart_grocery_price_db_v1',
   USER_BUDGET: 'smart_grocery_budget_v1'
 };
@@ -27,16 +27,16 @@ export const SEED_SESSIONS = [
   {
     id: 'session-prev-lotte-1',
     storeName: 'Lotte Mart Grocery - Puri Indah',
-    date: '2026-09-28',
+    date: '2026-09-28', // Bulan lalu
     budgetLimit: 500000,
     totalSpent: 384500,
     totalSaved: 48500,
     note: 'Belanja Bulanan Kost Awal Semester',
     items: [
-      { id: 's1', name: 'Beras Ramos 5kg', category: 'Bahan Pokok', unit: 'pack', qty: 1, originalPrice: 68000, discountString: '0', finalUnitPrice: 68000, subtotal: 68000 },
-      { id: 's2', name: 'Minyak Goreng Tropical 2L', category: 'Bahan Pokok', unit: 'liter', qty: 2, originalPrice: 35000, discountString: '10%', finalUnitPrice: 31500, subtotal: 63000 },
-      { id: 's3', name: 'Telur Ayam Negeri 1kg', category: 'Bahan Pokok', unit: 'kg', qty: 1, originalPrice: 28500, discountString: '0', finalUnitPrice: 28500, subtotal: 28500 },
-      { id: 's4', name: 'Indomie Goreng Special', category: 'Makanan Cepat Saji', unit: 'dus', qty: 1, originalPrice: 118000, discountString: '5%', finalUnitPrice: 112000, subtotal: 112000 },
+      { id: 's1', name: 'Beras 5kg', category: 'Bahan Pokok', unit: 'pack', qty: 1, originalPrice: 68000, discountString: '0', finalUnitPrice: 68000, subtotal: 68000 },
+      { id: 's2', name: 'Telur 1kg', category: 'Bahan Pokok', unit: 'kg', qty: 1, originalPrice: 32000, discountString: '0', finalUnitPrice: 32000, subtotal: 32000 },
+      { id: 's3', name: 'Garam 500g', category: 'Bumbu & Dapur', unit: 'pack', qty: 1, originalPrice: 5000, discountString: '0', finalUnitPrice: 5000, subtotal: 5000 },
+      { id: 's4', name: 'Minyak Goreng Tropical 2L', category: 'Bahan Pokok', unit: 'liter', qty: 2, originalPrice: 35000, discountString: '10%', finalUnitPrice: 31500, subtotal: 63000 },
       { id: 's5', name: 'Ultra Milk Cokelat 1L', category: 'Minuman', unit: 'pcs', qty: 2, originalPrice: 21000, discountString: '10%', finalUnitPrice: 18900, subtotal: 37800 },
       { id: 's6', name: 'Rinso Cair Molto 750ml', category: 'Mandi & Cuci', unit: 'pack', qty: 1, originalPrice: 24500, discountString: '15%', finalUnitPrice: 20800, subtotal: 20800 },
       { id: 's7', name: 'Sabun Mandi Lifebuoy Refill 450ml', category: 'Mandi & Cuci', unit: 'pack', qty: 2, originalPrice: 26000, discountString: '30%', finalUnitPrice: 18200, subtotal: 36400 },
@@ -52,10 +52,10 @@ export const SEED_SESSIONS = [
     totalSaved: 36000,
     note: 'Belanja Tengah Bulan & Lauk Dingin',
     items: [
-      { id: 's201', name: 'Beras Ramos 5kg', category: 'Bahan Pokok', unit: 'pack', qty: 1, originalPrice: 69500, discountString: '0', finalUnitPrice: 69500, subtotal: 69500 },
+      { id: 's201', name: 'Beras 5kg', category: 'Bahan Pokok', unit: 'pack', qty: 1, originalPrice: 69500, discountString: '0', finalUnitPrice: 69500, subtotal: 69500 },
       { id: 's202', name: 'Minyak Goreng Tropical 2L', category: 'Bahan Pokok', unit: 'liter', qty: 1, originalPrice: 34000, discountString: '0', finalUnitPrice: 34000, subtotal: 34000 },
       { id: 's203', name: 'Fiesta Chicken Nugget 500g', category: 'Makanan Cepat Saji', unit: 'pack', qty: 2, originalPrice: 52000, discountString: '20%', finalUnitPrice: 41600, subtotal: 83200 },
-      { id: 's204', name: 'Telur Ayam Negeri 1kg', category: 'Bahan Pokok', unit: 'kg', qty: 1, originalPrice: 29000, discountString: '0', finalUnitPrice: 29000, subtotal: 29000 },
+      { id: 's204', name: 'Telur 1kg', category: 'Bahan Pokok', unit: 'kg', qty: 1, originalPrice: 29000, discountString: '0', finalUnitPrice: 29000, subtotal: 29000 },
       { id: 's205', name: 'Chitato Sapi Panggang 68g', category: 'Camilan', unit: 'pcs', qty: 3, originalPrice: 12500, discountString: '0', finalUnitPrice: 12500, subtotal: 37500 },
       { id: 's206', name: 'Ultra Milk Cokelat 1L', category: 'Minuman', unit: 'pcs', qty: 1, originalPrice: 20000, discountString: '0', finalUnitPrice: 20000, subtotal: 20000 },
       { id: 's207', name: 'Deterjen Rinso 750ml', category: 'Mandi & Cuci', unit: 'pack', qty: 1, originalPrice: 22000, discountString: '10%', finalUnitPrice: 19800, subtotal: 19800 }
@@ -67,18 +67,42 @@ export const SEED_SESSIONS = [
 export const SEED_ACTIVE_CART = [
   {
     id: 'cart-1',
-    name: 'Beras Ramos 5kg',
+    name: 'Beras 5kg',
     category: 'Bahan Pokok',
     unit: 'pack',
     qty: 1,
-    originalPrice: 68000,
+    originalPrice: 74000, // Bulan lalu Rp 68.000 -> Sekarang Rp 74.000 (Naik +Rp 6.000)
     discountString: '0',
-    finalUnitPrice: 68000,
-    subtotal: 68000,
+    finalUnitPrice: 74000,
+    subtotal: 74000,
     discountSavings: 0
   },
   {
     id: 'cart-2',
+    name: 'Telur 1kg',
+    category: 'Bahan Pokok',
+    unit: 'kg',
+    qty: 1,
+    originalPrice: 28000, // Bulan lalu Rp 32.000 -> Sekarang Rp 28.000 (Turun -Rp 4.000)
+    discountString: '0',
+    finalUnitPrice: 28000,
+    subtotal: 28000,
+    discountSavings: 0
+  },
+  {
+    id: 'cart-3',
+    name: 'Garam 500g',
+    category: 'Bumbu & Dapur',
+    unit: 'pack',
+    qty: 1,
+    originalPrice: 5000, // Bulan lalu Rp 5.000 -> Sekarang Rp 5.000 (Tetap Stabil)
+    discountString: '0',
+    finalUnitPrice: 5000,
+    subtotal: 5000,
+    discountSavings: 0
+  },
+  {
+    id: 'cart-4',
     name: 'Minyak Goreng Tropical 2L',
     category: 'Bahan Pokok',
     unit: 'liter',
@@ -88,36 +112,18 @@ export const SEED_ACTIVE_CART = [
     finalUnitPrice: 15200,
     subtotal: 30400,
     discountSavings: 45600
-  },
-  {
-    id: 'cart-3',
-    name: 'Telur Ayam Negeri 1kg',
-    category: 'Bahan Pokok',
-    unit: 'kg',
-    qty: 1,
-    originalPrice: 31000, // Price went up from 28.500 -> shows RED UP ARROW
-    discountString: '0',
-    finalUnitPrice: 31000,
-    subtotal: 31000,
-    discountSavings: 0
-  },
-  {
-    id: 'cart-4',
-    name: 'Ultra Milk Cokelat 1L',
-    category: 'Minuman',
-    unit: 'pcs',
-    qty: 2,
-    originalPrice: 19500,
-    discountString: '10%', // Promo turun -> shows GREEN DOWN ARROW
-    finalUnitPrice: 17550,
-    subtotal: 35100,
-    discountSavings: 3900
   }
 ];
 
 // Quick auto-complete products for student budget grocery
 export const QUICK_PRODUCTS = [
-  { name: 'Beras Ramos 5kg', category: 'Bahan Pokok', unit: 'pack', defaultPrice: 68000 },
+  { name: 'Beras 5kg', category: 'Bahan Pokok', unit: 'pack', defaultPrice: 74000 },
+  { name: 'Telur 1kg', category: 'Bahan Pokok', unit: 'kg', defaultPrice: 28000 },
+  { name: 'Garam 500g', category: 'Bumbu & Dapur', unit: 'pack', defaultPrice: 5000 },
+  { name: 'Minyak Goreng Tropical 2L', category: 'Bahan Pokok', unit: 'liter', defaultPrice: 34000 },
+  { name: 'Indomie Goreng Special', category: 'Makanan Cepat Saji', unit: 'dus', defaultPrice: 115000 },
+  { name: 'Ultra Milk Cokelat 1L', category: 'Minuman', unit: 'pcs', defaultPrice: 19500 },
+  { name: 'Fiesta Chicken Nugget 500g', category: 'Makanan Cepat Saji', unit: 'pack', defaultPrice: 45000 },
   { name: 'Minyak Goreng Tropical 2L', category: 'Bahan Pokok', unit: 'liter', defaultPrice: 34000 },
   { name: 'Telur Ayam Negeri 1kg', category: 'Bahan Pokok', unit: 'kg', defaultPrice: 28500 },
   { name: 'Indomie Goreng Special', category: 'Makanan Cepat Saji', unit: 'dus', defaultPrice: 115000 },
