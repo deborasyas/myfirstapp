@@ -1543,6 +1543,10 @@ function renderCart() {
   if (cartItemCount) {
     cartItemCount.textContent = `${totals.totalItemsCount} Item (${totals.uniqueCount} Jenis)`;
   }
+  const switchTroliCount = document.getElementById('switch-troli-count');
+  if (switchTroliCount) {
+    switchTroliCount.textContent = totals.totalItemsCount;
+  }
   if (navCartBadge) {
     navCartBadge.textContent = totals.totalItemsCount;
     navCartBadge.style.display = totals.totalItemsCount > 0 ? 'inline-block' : 'none';
@@ -1555,7 +1559,7 @@ function renderCart() {
           <i data-lucide="shopping-cart" style="width:32px; height:32px;"></i>
         </div>
         <h3>Troli Belanja Masih Kosong</h3>
-        <p>Tekan tombol <strong>+ Masukkan Troli</strong> di bawah atau pilih item favorit anak rantau saat mendorong troli.</p>
+        <p>Tekan tombol <strong>+ Masukkan Troli</strong> di bawah atau pilih produk dari <strong>Etalase Belanja</strong>.</p>
       </div>
     `;
     refreshLucideIcons();
@@ -1899,7 +1903,7 @@ function initModalListeners() {
 
   if (btnCloseFinishModal && finishModalOverlay) {
     btnCloseFinishModal.addEventListener('click', () => {
-      finishModalOverlay.classList.remove('open');
+      finishModalOverlay.classList.remove('open', 'active');
     });
   }
 
@@ -1917,7 +1921,7 @@ function initModalListeners() {
         FirebaseSync.saveHistory(savedSession);
         cartManager.clearCart();
         dispatchTrolleySync(true);
-        if (finishModalOverlay) finishModalOverlay.classList.remove('open');
+        if (finishModalOverlay) finishModalOverlay.classList.remove('open', 'active');
         SoundEffects.playCoinChime();
         triggerHaptic([50, 100, 50]);
         showToast('Sesi belanja berhasil disimpan ke Riwayat Toko!', '🎉');
@@ -2911,6 +2915,7 @@ function handleUserSignedIn(user) {
     renderHistorySessions();
     renderCategoryBreakdown();
     renderCategoryBudgets();
+    try { renderEtalaseGrid(); } catch (e) {}
     refreshLucideIcons();
   } catch (renderErr) {
     console.warn('handleUserSignedIn render warning:', renderErr);
@@ -3078,6 +3083,404 @@ function initPWA() {
   }
 }
 
+// ============================================================================
+// ETALASE BELANJA (Showcase Grid, Animated Product Cards & Adjustable Pricing)
+// ============================================================================
+
+const DEFAULT_ETALASE_PRODUCTS = [
+  { id: 'prod-beras-5kg', name: 'Beras Ramos Super 5kg', category: 'Bahan Pokok', unit: 'karung', price: 74500, emoji: '🌾', bgGradient: 'linear-gradient(135deg, #fef3c7, #fde68a)', badge: 'Bahan Pokok' },
+  { id: 'prod-minyak-2l', name: 'Minyak Goreng Sawit 2L', category: 'Bahan Pokok', unit: 'pouch', price: 34500, emoji: '🍳', bgGradient: 'linear-gradient(135deg, #fef9c3, #fef08a)', badge: 'Promo' },
+  { id: 'prod-telur-1kg', name: 'Telur Ayam Negeri 1kg', category: 'Segar & Protein', unit: 'kg', price: 28000, emoji: '🥚', bgGradient: 'linear-gradient(135deg, #ffedd5, #fed7aa)', badge: 'Segar' },
+  { id: 'prod-ayam-1kg', name: 'Daging Ayam Broiler 1kg', category: 'Segar & Protein', unit: 'kg', price: 36000, emoji: '🍗', bgGradient: 'linear-gradient(135deg, #fee2e2, #fecaca)', badge: 'Segar' },
+  { id: 'prod-susu-uht', name: 'Susu UHT Full Cream 1L', category: 'Minuman', unit: 'kotak', price: 19500, emoji: '🥛', bgGradient: 'linear-gradient(135deg, #e0f2fe, #bae6fd)', badge: 'Favorit' },
+  { id: 'prod-mie-instan', name: 'Mie Instan Goreng Spesial', category: 'Bahan Pokok', unit: 'bungkus', price: 3100, emoji: '🍜', bgGradient: 'linear-gradient(135deg, #ffedd5, #fed7aa)', badge: 'Hemat' },
+  { id: 'prod-bayam', name: 'Sayur Bayam Hijau Segar', category: 'Sayur & Buah', unit: 'ikat', price: 4500, emoji: '🥬', bgGradient: 'linear-gradient(135deg, #dcfce7, #bbf7d0)', badge: 'Segar' },
+  { id: 'prod-wortel', name: 'Wortel Import Segar 500g', category: 'Sayur & Buah', unit: 'pack', price: 8500, emoji: '🥕', bgGradient: 'linear-gradient(135deg, #ffedd5, #fed7aa)', badge: 'Segar' },
+  { id: 'prod-pisang', name: 'Pisang Cavendish Sunpride 1kg', category: 'Sayur & Buah', unit: 'sisir', price: 23000, emoji: '🍌', bgGradient: 'linear-gradient(135deg, #fef9c3, #fef08a)', badge: 'Manis' },
+  { id: 'prod-roti-tawar', name: 'Roti Tawar Gandum Kupas', category: 'Bahan Pokok', unit: 'bungkus', price: 16500, emoji: '🍞', bgGradient: 'linear-gradient(135deg, #fef3c7, #fde68a)', badge: 'Sarapan' },
+  { id: 'prod-kopi', name: 'Kopi Bubuk Robusta Asli 150g', category: 'Minuman', unit: 'bungkus', price: 14000, emoji: '☕', bgGradient: 'linear-gradient(135deg, #f3e8ff, #e9d5ff)', badge: 'Aroma' },
+  { id: 'prod-sabun-cuci', name: 'Sabun Cuci Piring Jeruk Nipis 780ml', category: 'Kebersihan', unit: 'pouch', price: 12500, emoji: '🧼', bgGradient: 'linear-gradient(135deg, #ccfbf1, #99f6e4)', badge: 'Bersih' },
+  { id: 'prod-deterjen', name: 'Deterjen Bubuk Konsentrat 800g', category: 'Kebersihan', unit: 'pack', price: 21000, emoji: '🧺', bgGradient: 'linear-gradient(135deg, #e0e7ff, #c7d2fe)', badge: 'Harum' },
+  { id: 'prod-garam', name: 'Garam Dapur Beryodium 250g', category: 'Bumbu & Dapur', unit: 'bungkus', price: 4000, emoji: '🧂', bgGradient: 'linear-gradient(135deg, #f1f5f9, #e2e8f0)', badge: 'Dapur' },
+  { id: 'prod-bawang', name: 'Bawang Merah Brebes 250g', category: 'Bumbu & Dapur', unit: 'pack', price: 12500, emoji: '🧅', bgGradient: 'linear-gradient(135deg, #fce7f3, #fbcfe8)', badge: 'Dapur' },
+  { id: 'prod-teh', name: 'Teh Celup Hitam Wangi Melati', category: 'Minuman', unit: 'kotak', price: 8500, emoji: '🫖', bgGradient: 'linear-gradient(135deg, #ffedd5, #fed7aa)', badge: 'Segar' }
+];
+
+let etalaseActiveCategory = 'Semua';
+let etalaseSearchQuery = '';
+let currentEditingProductId = null;
+let newProductSelectedEmoji = '🌾';
+
+function getEtalaseProducts() {
+  try {
+    const raw = localStorage.getItem('smart_grocery_etalase_products');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch (e) {
+    console.warn('Failed to load etalase products from storage:', e);
+  }
+  return DEFAULT_ETALASE_PRODUCTS;
+}
+
+function saveEtalaseProducts(products) {
+  try {
+    localStorage.setItem('smart_grocery_etalase_products', JSON.stringify(products));
+  } catch (e) {
+    console.error('Failed to save etalase products:', e);
+  }
+}
+
+function renderEtalaseGrid() {
+  const grid = document.getElementById('etalase-products-grid');
+  if (!grid) return;
+
+  const allProducts = getEtalaseProducts();
+  const filtered = allProducts.filter(p => {
+    const matchCat = (!etalaseActiveCategory || etalaseActiveCategory === 'Semua' || etalaseActiveCategory === 'all') ||
+      (p.category === etalaseActiveCategory) ||
+      (etalaseActiveCategory === 'Kebersihan' && (p.category === 'Mandi & Cuci' || p.category === 'Kebersihan')) ||
+      (etalaseActiveCategory === 'Mandi & Cuci' && (p.category === 'Mandi & Cuci' || p.category === 'Kebersihan'));
+    const q = etalaseSearchQuery.trim().toLowerCase();
+    const matchQuery = !q || p.name.toLowerCase().includes(q) || p.category.toLowerCase().includes(q);
+    return matchCat && matchQuery;
+  });
+
+  if (filtered.length === 0) {
+    grid.innerHTML = `
+      <div style="grid-column: 1 / -1; padding: 36px 20px; text-align: center; color: var(--text-muted); background: var(--surface-card); border-radius: var(--radius-xl); border: 1px dashed var(--border-subtle); margin: 8px 0;">
+        <div style="font-size: 38px; margin-bottom: 8px;">🔍</div>
+        <div style="font-weight: 700; color: var(--text-primary); font-size: 14px;">Produk Tidak Ditemukan</div>
+        <div style="font-size: 12px; margin-top: 4px;">Coba gunakan kata kunci lain atau tambahkan produk baru dengan tombol <strong>+ Tambah</strong> di atas.</div>
+      </div>
+    `;
+    return;
+  }
+
+  grid.innerHTML = filtered.map(prod => {
+    return `
+      <div class="etalase-card" data-id="${escapeHtml(prod.id)}">
+        <div class="etalase-art-wrap" style="background: ${prod.bgGradient || 'linear-gradient(135deg, #f0fdf4, #dcfce7)'};">
+          <span class="animated-product-art">${prod.emoji || '🛍️'}</span>
+          ${prod.badge ? `<span class="etalase-badge">${escapeHtml(prod.badge)}</span>` : ''}
+        </div>
+        <div class="etalase-info">
+          <div class="etalase-cat-tag">${escapeHtml(prod.category)}</div>
+          <h4 class="etalase-name" title="${escapeHtml(prod.name)}">${escapeHtml(prod.name)}</h4>
+          <div class="etalase-unit-tag">${escapeHtml(prod.unit ? 'per ' + prod.unit : 'per item')}</div>
+          
+          <div class="etalase-price-row">
+            <div>
+              <div class="etalase-price-num">${CurrencyUtils.formatRupiah(prod.price)}</div>
+            </div>
+            <button type="button" class="btn-edit-price-pill" onclick="openEditPriceModal('${escapeHtml(prod.id)}')" title="Atur / Sesuaikan Harga">
+              ✏️ Atur
+            </button>
+          </div>
+
+          <button type="button" class="btn-add-cart-etalase" onclick="addProductToCart('${escapeHtml(prod.id)}')">
+            <i data-lucide="shopping-cart" style="width:14px; height:14px;"></i>
+            <span>+ Troli</span>
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  refreshLucideIcons();
+}
+
+function addProductToCart(productId) {
+  const products = getEtalaseProducts();
+  const prod = products.find(p => p.id === productId);
+  if (!prod) return;
+
+  if (!cartManager) {
+    cartManager = new CartManager();
+  }
+
+  cartManager.addItem({
+    name: prod.name,
+    category: prod.category || 'Bahan Pokok',
+    unit: prod.unit || 'pcs',
+    quantity: 1,
+    originalPrice: Number(prod.price) || 0,
+    discountString: '0'
+  });
+
+  // Sound and haptic feedback
+  try {
+    if (typeof AudioService !== 'undefined' && AudioService.playAddSuccess) {
+      AudioService.playAddSuccess();
+    }
+  } catch (e) {}
+
+  try {
+    if (navigator.vibrate) {
+      navigator.vibrate([25, 40, 25]);
+    }
+  } catch (e) {}
+
+  // Update views
+  renderCart();
+  renderBudgetStatus();
+  renderCategoryBreakdown();
+
+  // Update count badge in trolley switcher
+  const totals = cartManager.getTotals();
+  const switchTroliCount = document.getElementById('switch-troli-count');
+  if (switchTroliCount) {
+    switchTroliCount.textContent = totals.totalItemsCount;
+  }
+
+  showToast(`"${prod.name}" berhasil masuk ke Troli!`, '🛒');
+}
+
+function openEditPriceModal(productId) {
+  const products = getEtalaseProducts();
+  const prod = products.find(p => p.id === productId);
+  if (!prod) return;
+
+  currentEditingProductId = productId;
+
+  const modal = document.getElementById('price-edit-modal-overlay');
+  const nameEl = document.getElementById('edit-price-product-name');
+  const catEl = document.getElementById('edit-price-category-tag');
+  const inputEl = document.getElementById('input-edit-etalase-price');
+
+  if (nameEl) nameEl.textContent = `${prod.emoji || '🛍️'} ${prod.name}`;
+  if (catEl) catEl.textContent = `${prod.category} (${prod.unit})`;
+  if (inputEl) {
+    inputEl.value = prod.price;
+    setTimeout(() => {
+      inputEl.focus();
+      inputEl.select();
+    }, 100);
+  }
+
+  if (modal) {
+    modal.classList.add('open', 'active');
+  }
+}
+
+function closeEditPriceModal() {
+  const modal = document.getElementById('price-edit-modal-overlay');
+  if (modal) {
+    modal.classList.remove('open', 'active');
+  }
+  currentEditingProductId = null;
+}
+
+function openAddProductModal() {
+  const modal = document.getElementById('add-etalase-modal-overlay');
+  if (modal) {
+    modal.classList.add('open', 'active');
+  }
+}
+
+function closeAddProductModal() {
+  const modal = document.getElementById('add-etalase-modal-overlay');
+  if (modal) {
+    modal.classList.remove('open', 'active');
+  }
+}
+
+// Make functions globally available for inline onclick
+window.addProductToCart = addProductToCart;
+window.openEditPriceModal = openEditPriceModal;
+window.closeEditPriceModal = closeEditPriceModal;
+window.openAddProductModal = openAddProductModal;
+window.closeAddProductModal = closeAddProductModal;
+window.renderEtalaseGrid = renderEtalaseGrid;
+
+function initEtalase() {
+  // 1. Sub-tab switcher between Etalase and Troli
+  const btnSwitchEtalase = document.getElementById('btn-switch-etalase');
+  const btnSwitchTroli = document.getElementById('btn-switch-troli');
+  const etalaseSection = document.getElementById('etalase-view-section');
+  const troliSection = document.getElementById('troli-view-section');
+
+  function showEtalaseTab() {
+    if (btnSwitchEtalase) btnSwitchEtalase.classList.add('active');
+    if (btnSwitchTroli) btnSwitchTroli.classList.remove('active');
+    if (etalaseSection) etalaseSection.style.display = 'block';
+    if (troliSection) troliSection.style.display = 'none';
+  }
+
+  function showTroliTab() {
+    if (btnSwitchTroli) btnSwitchTroli.classList.add('active');
+    if (btnSwitchEtalase) btnSwitchEtalase.classList.remove('active');
+    if (troliSection) troliSection.style.display = 'block';
+    if (etalaseSection) etalaseSection.style.display = 'none';
+  }
+
+  if (btnSwitchEtalase) btnSwitchEtalase.addEventListener('click', showEtalaseTab);
+  if (btnSwitchTroli) btnSwitchTroli.addEventListener('click', showTroliTab);
+
+  // 2. Search input filtering
+  const searchInput = document.getElementById('etalase-search-input');
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      etalaseSearchQuery = e.target.value;
+      renderEtalaseGrid();
+    });
+  }
+
+  // 3. Category chips filtering
+  const catChipsContainer = document.getElementById('etalase-cat-chips');
+  if (catChipsContainer) {
+    catChipsContainer.querySelectorAll('.cat-chip-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        catChipsContainer.querySelectorAll('.cat-chip-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        etalaseActiveCategory = btn.getAttribute('data-cat') || 'Semua';
+        renderEtalaseGrid();
+      });
+    });
+  }
+
+  // 4. Edit Price Modal setup & listeners
+  const btnClosePriceEdit = document.getElementById('btn-close-price-edit');
+  if (btnClosePriceEdit) btnClosePriceEdit.addEventListener('click', closeEditPriceModal);
+
+  const priceModalOverlay = document.getElementById('price-edit-modal-overlay');
+  if (priceModalOverlay) {
+    priceModalOverlay.addEventListener('click', (e) => {
+      if (e.target === priceModalOverlay) closeEditPriceModal();
+    });
+  }
+
+  // Quick adjust price chips in Edit Modal
+  const editPriceInput = document.getElementById('input-edit-etalase-price');
+  document.querySelectorAll('.quick-adjust-price-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const delta = parseInt(chip.getAttribute('data-delta'), 10) || 0;
+      if (editPriceInput) {
+        let current = parseInt(editPriceInput.value, 10) || 0;
+        current = Math.max(100, current + delta);
+        editPriceInput.value = current;
+      }
+    });
+  });
+
+  const btnSavePrice = document.getElementById('btn-save-etalase-price') || document.getElementById('btn-save-edit-price');
+  if (btnSavePrice) {
+    btnSavePrice.addEventListener('click', () => {
+      if (!currentEditingProductId) return;
+      const input = document.getElementById('input-edit-etalase-price');
+      const newPrice = Math.max(100, parseInt(input?.value, 10) || 0);
+
+      const products = getEtalaseProducts();
+      const target = products.find(p => p.id === currentEditingProductId);
+      if (target) {
+        target.price = newPrice;
+        saveEtalaseProducts(products);
+        renderEtalaseGrid();
+        showToast(`Harga "${target.name}" diatur ke ${CurrencyUtils.formatRupiah(newPrice)}`, '💰');
+      }
+      closeEditPriceModal();
+    });
+  }
+
+  // 5. Add New Product Modal setup & listeners
+  const btnOpenAddProduct = document.getElementById('btn-open-add-product');
+  if (btnOpenAddProduct) btnOpenAddProduct.addEventListener('click', openAddProductModal);
+
+  const btnCloseAddEtalase = document.getElementById('btn-close-add-etalase');
+  if (btnCloseAddEtalase) btnCloseAddEtalase.addEventListener('click', closeAddProductModal);
+
+  const addModalOverlay = document.getElementById('add-etalase-modal-overlay');
+  if (addModalOverlay) {
+    addModalOverlay.addEventListener('click', (e) => {
+      if (e.target === addModalOverlay) closeAddProductModal();
+    });
+  }
+
+  // Emoji picker in Add Product Modal
+  const emojiPicker = document.getElementById('new-prod-emoji-picker');
+  if (emojiPicker) {
+    emojiPicker.querySelectorAll('.emoji-pick-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        emojiPicker.querySelectorAll('.emoji-pick-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        newProductSelectedEmoji = btn.getAttribute('data-emoji') || '🛍️';
+      });
+    });
+  }
+
+  // Add Product Form submit
+  const formAddProd = document.getElementById('form-add-etalase-product');
+  if (formAddProd) {
+    formAddProd.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const nameInput = document.getElementById('new-prod-name');
+      const catSelect = document.getElementById('new-prod-category');
+      const unitSelect = document.getElementById('new-prod-unit');
+      const priceInput = document.getElementById('new-prod-price');
+
+      const name = nameInput?.value.trim() || 'Produk Baru';
+      const category = catSelect?.value || 'Bahan Pokok';
+      const unit = unitSelect?.value || 'pcs';
+      const price = Math.max(100, parseInt(priceInput?.value, 10) || 10000);
+
+      const gradients = [
+        'linear-gradient(135deg, #fef3c7, #fde68a)',
+        'linear-gradient(135deg, #e0f2fe, #bae6fd)',
+        'linear-gradient(135deg, #dcfce7, #bbf7d0)',
+        'linear-gradient(135deg, #fce7f3, #fbcfe8)',
+        'linear-gradient(135deg, #ffedd5, #fed7aa)',
+        'linear-gradient(135deg, #f3e8ff, #e9d5ff)',
+        'linear-gradient(135deg, #ccfbf1, #99f6e4)'
+      ];
+      const randBg = gradients[Math.floor(Math.random() * gradients.length)];
+
+      const newProd = {
+        id: 'prod-' + Date.now(),
+        name: name,
+        category: category,
+        unit: unit,
+        price: price,
+        emoji: newProductSelectedEmoji || '🛍️',
+        bgGradient: randBg,
+        badge: 'Baru'
+      };
+
+      const products = getEtalaseProducts();
+      products.unshift(newProd);
+      saveEtalaseProducts(products);
+
+      formAddProd.reset();
+      closeAddProductModal();
+      renderEtalaseGrid();
+      showToast(`Produk "${name}" berhasil ditambahkan ke Etalase!`, '🎉');
+    });
+  }
+
+  // 6. Top Checkout button in Isi Troli view (Requirement 3: Selesai / Checkout)
+  const btnCheckoutTop = document.getElementById('btn-checkout-top');
+  if (btnCheckoutTop) {
+    btnCheckoutTop.addEventListener('click', () => {
+      const items = cartManager ? cartManager.getItems() : [];
+      if (items.length === 0) {
+        showToast('Troli belanja masih kosong! Masukkan produk dari etalase terlebih dahulu.', '⚠️');
+        return;
+      }
+      openFinishModal();
+    });
+  }
+
+  // Render initial etalase
+  renderEtalaseGrid();
+
+  // Initial troli badge count update
+  if (cartManager) {
+    const totals = cartManager.getTotals();
+    const switchTroliCount = document.getElementById('switch-troli-count');
+    if (switchTroliCount) switchTroliCount.textContent = totals.totalItemsCount;
+  }
+}
+
 function escapeHtml(str) {
   if (!str) return '';
   return str.toString()
@@ -3107,6 +3510,7 @@ function initApp() {
   try { refreshLucideIcons(); } catch (e) { console.warn('refreshLucideIcons notice:', e); }
   try { initRealtimeSync(); } catch (e) { console.warn('initRealtimeSync notice:', e); }
   try { initAuthUI(); } catch (e) { console.error('initAuthUI error:', e); }
+  try { initEtalase(); } catch (e) { console.warn('initEtalase notice:', e); }
 }
 
 // Initialize when DOM is ready

@@ -242,7 +242,7 @@
         <div id="tab-belanja-view" class="tab-view active">
 
           <!-- F-05: Pengendali Anggaran (Safety Cap Banner) -->
-          <section id="budget-banner" class="budget-safety-banner status-safe">
+          <div class="sticky-budget-wrapper"><section id="budget-banner" class="budget-safety-banner status-safe">
             <div class="safety-header-row">
               <div class="safety-label-group">
                 <div class="safety-icon-bubble" id="budget-safety-icon">🛡️</div>
@@ -287,15 +287,64 @@
               <div id="smart-cut-list"></div>
             </div>
           </section>
+          </div>
+
+          <!-- Segmented Switch: Etalase Belanja vs Isi Troli -->
+          <div class="belanja-nav-switch">
+            <button type="button" id="btn-switch-etalase" class="belanja-switch-btn active">
+              <i data-lucide="store" style="width:14px; height:14px;"></i>
+              <span>Etalase Belanja</span>
+            </button>
+            <button type="button" id="btn-switch-troli" class="belanja-switch-btn">
+              <i data-lucide="shopping-cart" style="width:14px; height:14px;"></i>
+              <span>Isi Troli (<span id="switch-troli-count">5</span>)</span>
+            </button>
+          </div>
+
+          <!-- ETALASE BELANJA PRODUK (Showcase Grid) -->
+          <section id="etalase-view-section" class="etalase-section">
+            <div class="etalase-header-controls">
+              <div class="etalase-search-bar">
+                <i data-lucide="search" style="width:14px; height:14px; color:#94a3b8;"></i>
+                <input type="text" id="etalase-search-input" placeholder="Cari beras, minyak, telur, susu..." />
+              </div>
+              <button type="button" id="btn-open-add-product" class="btn-add-product-showcase" onclick="openAddProductModal()" title="Tambah Produk Baru ke Etalase">
+                <i data-lucide="plus" style="width:14px; height:14px;"></i>
+                <span>+ Produk Baru</span>
+              </button>
+            </div>
+
+            <!-- Category Filter Chips -->
+            <div class="etalase-category-chips" id="etalase-cat-chips">
+              <button type="button" class="cat-chip-btn active" data-cat="Semua">Semua</button>
+              <button type="button" class="cat-chip-btn" data-cat="Bahan Pokok">🌾 Bahan Pokok</button>
+              <button type="button" class="cat-chip-btn" data-cat="Segar & Protein">🍗 Segar</button>
+              <button type="button" class="cat-chip-btn" data-cat="Sayur & Buah">🥕 Sayur & Buah</button>
+              <button type="button" class="cat-chip-btn" data-cat="Minuman">🥛 Minuman</button>
+              <button type="button" class="cat-chip-btn" data-cat="Kebersihan">🧼 Kebersihan</button>
+              <button type="button" class="cat-chip-btn" data-cat="Bumbu & Dapur">🧂 Bumbu</button>
+            </div>
+
+            <!-- Product Showcase Grid (Shopee-Style 2-Column Grid) -->
+            <div class="etalase-grid" id="etalase-products-grid">
+              <!-- Dynamically populated from JS -->
+            </div>
+          </section>
 
           <!-- Trolley Items Section -->
-          <section class="cart-section">
-            <div class="section-title-row">
-              <div class="section-title">
-                <i data-lucide="shopping-bag" style="width:16px; height:16px; color:#10b981;"></i>
-                <span>Isi Troli Supermarket</span>
+          <section id="troli-view-section" class="cart-section" style="display:none;">
+            <div class="troli-top-bar">
+              <div class="troli-title-col">
+                <div class="section-title">
+                  <i data-lucide="shopping-bag" style="width:16px; height:16px; color:#10b981;"></i>
+                  <span>Isi Troli Supermarket</span>
+                </div>
+                <span class="item-counter-pill" id="cart-item-count">0 Item</span>
               </div>
-              <span class="item-counter-pill" id="cart-item-count">5 Item (4 Jenis)</span>
+              <button type="button" id="btn-checkout-top" class="btn-checkout-top-action" title="Selesaikan Belanja & Simpan ke Riwayat Toko">
+                <i data-lucide="check-circle" style="width:16px; height:16px;"></i>
+                <span>Selesai</span>
+              </button>
             </div>
 
             <!-- Cart Items Container -->
@@ -471,41 +520,6 @@
                 </div>
               </div>
             </div>
-
-            <!-- Quick Add Suggestions for College / Boarding Students -->
-            <div class="quick-add-section">
-              <div
-                style="font-size:12px; font-weight:700; color:#94a3b8; margin-bottom:6px; display:flex; align-items:center; gap:6px;">
-                <i data-lucide="sparkles" style="width:13px; height:13px; color:#fbbf24;"></i>
-                <span>Item Cepat Favorit Anak Rantau:</span>
-              </div>
-              <div class="quick-chips-scroll" id="quick-products-chips">
-                <button type="button" class="quick-product-chip">
-                  <span class="quick-chip-name">Beras 5kg</span>
-                  <span class="quick-chip-price">Rp 74.000</span>
-                </button>
-                <button type="button" class="quick-product-chip">
-                  <span class="quick-chip-name">Telur 1kg</span>
-                  <span class="quick-chip-price">Rp 28.000</span>
-                </button>
-                <button type="button" class="quick-product-chip">
-                  <span class="quick-chip-name">Garam 500g</span>
-                  <span class="quick-chip-price">Rp 5.000</span>
-                </button>
-                <button type="button" class="quick-product-chip">
-                  <span class="quick-chip-name">Minyak Goreng Tropical 2L</span>
-                  <span class="quick-chip-price">Rp 34.000</span>
-                </button>
-                <button type="button" class="quick-product-chip">
-                  <span class="quick-chip-name">Indomie Goreng Special</span>
-                  <span class="quick-chip-price">Rp 115.000</span>
-                </button>
-                <button type="button" class="quick-product-chip">
-                  <span class="quick-chip-name">Ultra Milk Cokelat 1L</span>
-                  <span class="quick-chip-price">Rp 19.500</span>
-                </button>
-              </div>
-            </div>
           </section>
 
         </div>
@@ -649,18 +663,6 @@
         </div>
 
       </main>
-
-      <!-- Floating Action Button (+ Tambah Item) in Belanja Tab -->
-      <div id="cart-floating-dock" class="cart-floating-cta-bar">
-        <button id="btn-open-add-modal" class="btn-add-item-fab">
-          <i data-lucide="plus-circle" style="width:20px; height:20px;"></i>
-          <span>+ Masukkan Troli</span>
-        </button>
-        <button id="btn-finish-shopping" class="btn-finish-session" title="Selesaikan Belanja & Simpan Riwayat">
-          <i data-lucide="check" style="width:18px; height:18px; color:#10b981;"></i>
-          <span>Selesai</span>
-        </button>
-      </div>
 
       <!-- Item 3: Navigasi Bawah (Bottom Navigation Bar) -->
       <nav class="mobile-bottom-nav">
@@ -943,6 +945,125 @@
               </button>
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- ============================================================== -->
+      <!-- MODAL UBAH HARGA PRODUK ETALASE                                -->
+      <!-- ============================================================== -->
+      <div id="price-edit-modal-overlay" class="modal-overlay">
+        <div class="bottom-sheet-content" style="max-width: 400px; margin: 0 auto; width: 100%;">
+          <div class="sheet-handle-bar"></div>
+          <div class="sheet-header">
+            <div>
+              <h2 id="edit-price-product-name" style="font-size:16px;">Atur Harga Produk</h2>
+              <span id="edit-price-category-tag" class="category-tag">Bahan Pokok</span>
+            </div>
+            <button type="button" id="btn-close-price-edit" class="sheet-close-btn" onclick="closeEditPriceModal()">&times;</button>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Harga Satuan Baru (Rp)</label>
+            <input type="number" id="input-edit-etalase-price" class="form-input-numeric" placeholder="74000" min="100" step="500" />
+          </div>
+
+          <!-- Quick price adjustment chips -->
+          <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px;">
+            <button type="button" class="quick-adjust-price-chip" data-delta="-5000">-5.000</button>
+            <button type="button" class="quick-adjust-price-chip" data-delta="-1000">-1.000</button>
+            <button type="button" class="quick-adjust-price-chip" data-delta="1000">+1.000</button>
+            <button type="button" class="quick-adjust-price-chip" data-delta="5000">+5.000</button>
+            <button type="button" class="quick-adjust-price-chip" data-delta="10000">+10.000</button>
+          </div>
+
+          <button type="button" id="btn-save-etalase-price" class="btn-submit-item" style="width:100%; height:44px;">
+            Simpan Perubahan Harga
+          </button>
+        </div>
+      </div>
+
+      <!-- ============================================================== -->
+      <!-- MODAL TAMBAH PRODUK BARU KE ETALASE                            -->
+      <!-- ============================================================== -->
+      <div id="add-etalase-modal-overlay" class="modal-overlay">
+        <div class="bottom-sheet-content" style="max-width: 400px; margin: 0 auto; width: 100%;">
+          <div class="sheet-handle-bar"></div>
+          <div class="sheet-header">
+            <h2>Tambah Produk Baru</h2>
+            <button type="button" id="btn-close-add-etalase" class="sheet-close-btn" onclick="closeAddProductModal()">&times;</button>
+          </div>
+
+          <form id="form-add-etalase-product">
+            <div class="form-group">
+              <label class="form-label">Nama Produk</label>
+              <input type="text" id="new-prod-name" class="form-input-text" placeholder="Contoh: Daging Sapi Segar 500g" required />
+            </div>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+              <div class="form-group">
+                <label class="form-label">Kategori</label>
+                <div class="styled-select-wrap">
+                  <select id="new-prod-category" class="styled-select">
+                    <option value="Bahan Pokok">🌾 Bahan Pokok</option>
+                    <option value="Segar & Protein">🍗 Segar & Protein</option>
+                    <option value="Sayur & Buah">🥕 Sayur & Buah</option>
+                    <option value="Minuman">🥛 Minuman</option>
+                    <option value="Kebersihan">🧼 Kebersihan</option>
+                    <option value="Bumbu & Dapur">🧂 Bumbu & Dapur</option>
+                    <option value="Makanan Cepat Saji">🍜 Makanan Cepat Saji</option>
+                    <option value="Camilan">🍪 Camilan</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Satuan</label>
+                <div class="styled-select-wrap">
+                  <select id="new-prod-unit" class="styled-select">
+                    <option value="bungkus">bungkus</option>
+                    <option value="pack">pack</option>
+                    <option value="kg">kg</option>
+                    <option value="pcs">pcs</option>
+                    <option value="liter">liter</option>
+                    <option value="pouch">pouch</option>
+                    <option value="botol">botol</option>
+                    <option value="dus">dus</option>
+                    <option value="ikat">ikat</option>
+                    <option value="kaleng">kaleng</option>
+                    <option value="buah">buah</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Harga Satuan (Rp)</label>
+              <input type="number" id="new-prod-price" class="form-input-numeric" placeholder="25000" min="100" required />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Pilih Ikon / Animasi</label>
+              <div class="emoji-picker-row" id="new-prod-emoji-picker">
+                <button type="button" class="emoji-pick-btn active" data-emoji="🌾">🌾</button>
+                <button type="button" class="emoji-pick-btn" data-emoji="🥚">🥚</button>
+                <button type="button" class="emoji-pick-btn" data-emoji="🍳">🍳</button>
+                <button type="button" class="emoji-pick-btn" data-emoji="🥛">🥛</button>
+                <button type="button" class="emoji-pick-btn" data-emoji="🍗">🍗</button>
+                <button type="button" class="emoji-pick-btn" data-emoji="🥩">🥩</button>
+                <button type="button" class="emoji-pick-btn" data-emoji="🥕">🥕</button>
+                <button type="button" class="emoji-pick-btn" data-emoji="🍎">🍎</button>
+                <button type="button" class="emoji-pick-btn" data-emoji="🍌">🍌</button>
+                <button type="button" class="emoji-pick-btn" data-emoji="🍞">🍞</button>
+                <button type="button" class="emoji-pick-btn" data-emoji="🍜">🍜</button>
+                <button type="button" class="emoji-pick-btn" data-emoji="☕">☕</button>
+                <button type="button" class="emoji-pick-btn" data-emoji="🧼">🧼</button>
+                <button type="button" class="emoji-pick-btn" data-emoji="🧂">🧂</button>
+              </div>
+            </div>
+
+            <button type="submit" class="btn-submit-item" style="width:100%; height:44px; margin-top:8px;">
+              Tambahkan ke Etalase
+            </button>
+          </form>
         </div>
       </div>
 
