@@ -28,7 +28,152 @@
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
 
   <!-- Stylesheet -->
-  <link rel="stylesheet" href="./css/style.css?v=2.0">
+  <link rel="stylesheet" href="./css/style.css?v=3.6">
+
+  <!-- Universal Immediate Theme Engine & Toggle Controller -->
+  <script>
+    (function() {
+      // 1. Initial State Check (Prevents FOUT)
+      try {
+        var savedTheme = localStorage.getItem('smart_grocery_theme');
+        if (savedTheme === 'dark') {
+          document.documentElement.setAttribute('data-theme', 'dark');
+          document.documentElement.classList.add('dark-mode');
+          document.addEventListener('DOMContentLoaded', function() {
+            if (document.body) document.body.classList.add('dark-mode');
+            updateThemeButton(true);
+          });
+        } else {
+          document.documentElement.setAttribute('data-theme', 'light');
+          document.documentElement.classList.remove('dark-mode');
+          document.addEventListener('DOMContentLoaded', function() {
+            if (document.body) document.body.classList.remove('dark-mode');
+            updateThemeButton(false);
+          });
+        }
+      } catch (e) {}
+
+      // 2. UI Update Helper
+      function updateThemeButton(isDark) {
+        var icon = document.getElementById('dark-mode-icon');
+        var text = document.getElementById('dark-mode-text');
+        var btn = document.getElementById('btn-toggle-dark-mode');
+        if (icon) icon.textContent = isDark ? '☀️' : '🌙';
+        if (text) text.textContent = isDark ? 'Light' : 'Dark Mode';
+        if (btn) {
+          btn.setAttribute('aria-label', isDark ? 'Beralih ke Mode Terang' : 'Beralih ke Mode Gelap');
+          btn.setAttribute('title', isDark ? 'Mode Terang (Light Mode)' : 'Mode Gelap (Dark Mode)');
+        }
+      }
+      window.updateThemeButtonUI = updateThemeButton;
+
+      // 3. Global Instant Toggle Function (Guaranteed available immediately)
+      window.toggleDarkMode = function() {
+        var isCurrentlyDark = (document.body && document.body.classList.contains('dark-mode')) ||
+                              document.documentElement.getAttribute('data-theme') === 'dark' ||
+                              document.documentElement.classList.contains('dark-mode');
+        var shouldBeDark = !isCurrentlyDark;
+
+        if (shouldBeDark) {
+          document.documentElement.setAttribute('data-theme', 'dark');
+          document.documentElement.classList.add('dark-mode');
+          if (document.body) document.body.classList.add('dark-mode');
+          try { localStorage.setItem('smart_grocery_theme', 'dark'); } catch (e) {}
+        } else {
+          document.documentElement.setAttribute('data-theme', 'light');
+          document.documentElement.classList.remove('dark-mode');
+          if (document.body) document.body.classList.remove('dark-mode');
+          try { localStorage.setItem('smart_grocery_theme', 'light'); } catch (e) {}
+        }
+
+        updateThemeButton(shouldBeDark);
+
+        try {
+          if (window.SoundEffects && SoundEffects.playBeep) {
+            SoundEffects.playBeep(shouldBeDark ? 520 : 680, 0.08);
+          }
+          if (typeof triggerHaptic === 'function') triggerHaptic([30]);
+        } catch (e) {}
+
+        try {
+          if (typeof showToast === 'function') {
+            showToast(shouldBeDark ? 'Mode Gelap diaktifkan 🌙' : 'Mode Terang diaktifkan ☀️', shouldBeDark ? '🌙' : '☀️');
+          }
+        } catch (e) {}
+      };
+
+      // 4. Cloud Sync Badge Click Handler (Trigger sync & show status)
+      window.handleCloudSyncClick = function() {
+        try {
+          var dot = document.getElementById('cloud-sync-dot');
+          if (dot) {
+            dot.classList.add('sync-pulse');
+            setTimeout(function() { dot.classList.remove('sync-pulse'); }, 1200);
+          }
+          if (window.SoundEffects && SoundEffects.playBeep) SoundEffects.playBeep(640, 0.08);
+          if (typeof triggerHaptic === 'function') triggerHaptic([25]);
+
+          var isOnline = navigator.onLine;
+          var isAuth = window.currentAuthUser && !window.currentAuthUser.isGuest;
+          var dev = (typeof FirebaseSync !== 'undefined' && FirebaseSync.getDeviceType) ? FirebaseSync.getDeviceType() : 'Perangkat';
+
+          if (isOnline && isAuth) {
+            if (typeof dispatchTrolleySync === 'function') dispatchTrolleySync(true);
+            if (typeof dispatchBudgetSync === 'function') dispatchBudgetSync();
+            if (typeof showToast === 'function') showToast('Cloud Sync Aktif (' + dev + ') • Multi-Device HP ↔ PC 🟢', '☁️');
+          } else {
+            if (typeof showToast === 'function') showToast('Tersimpan Lokal (' + dev + ') • Data tersimpan aman di browser 💾', '💾');
+          }
+        } catch (e) {
+          if (typeof showToast === 'function') showToast('Tersimpan Lokal • Data aman di browser 💾', '💾');
+        }
+      };
+
+      // 5. Troli Aktif Badge Click Handler (Switch to Troli View & show summary)
+      window.handleSessionStatusClick = function() {
+        try {
+          if (window.SoundEffects && SoundEffects.playBeep) SoundEffects.playBeep(560, 0.08);
+          if (typeof triggerHaptic === 'function') triggerHaptic([30]);
+
+          if (typeof switchTab === 'function') switchTab('tab-belanja');
+
+          var trolleyView = document.getElementById('troli-view-container');
+          var isTroliVisible = trolleyView && trolleyView.style.display !== 'none';
+
+          var cart = (typeof CartService !== 'undefined' && CartService.getCart) ? CartService.getCart() : [];
+          var count = 0;
+          var total = 0;
+          for (var i = 0; i < cart.length; i++) {
+            var qty = cart[i].quantity || 1;
+            count += qty;
+            total += (cart[i].price || 0) * qty;
+          }
+          var formatted = 'Rp ' + total.toLocaleString('id-ID');
+
+          if (!isTroliVisible) {
+            if (typeof switchBelanjaView === 'function') switchBelanjaView('troli');
+            if (typeof showToast === 'function') showToast('Troli Aktif: ' + count + ' barang (' + formatted + ') 🛒', '🛒');
+          } else {
+            if (typeof switchBelanjaView === 'function') switchBelanjaView('etalase');
+            if (typeof showToast === 'function') showToast('Beralih ke Etalase Belanja 🛍️', '🛍️');
+          }
+        } catch (e) {
+          if (typeof switchBelanjaView === 'function') switchBelanjaView('troli');
+          if (typeof showToast === 'function') showToast('Membuka Troli Belanja 🛒', '🛒');
+        }
+      };
+
+      // 6. Bind events on DOM Ready as safety backup
+      document.addEventListener('DOMContentLoaded', function() {
+        var btn = document.getElementById('btn-toggle-dark-mode');
+        if (btn) btn.onclick = window.toggleDarkMode;
+        var cloud = document.getElementById('cloud-sync-badge');
+        if (cloud) cloud.onclick = window.handleCloudSyncClick;
+        var troli = document.getElementById('session-status-badge');
+        if (troli) troli.onclick = window.handleSessionStatusClick;
+      });
+    })();
+  </script>
 </head>
 
 <body>
@@ -52,17 +197,6 @@
     <!-- Smartphone Chassis Frame (Max 430px centered) -->
     <div class="mobile-device-frame" id="mobile-frame">
 
-      <!-- Native Mobile Status Bar Mockup -->
-      <div class="mobile-status-bar">
-        <span class="status-time" id="status-live-time">12:08</span>
-        <div class="dynamic-island"></div>
-        <div class="status-icons">
-          <span>5G</span>
-          <span>📶</span>
-          <span>100% 🔋</span>
-        </div>
-      </div>
-
       <!-- PWA Add To Home Screen Prompt Banner -->
       <div id="pwa-install-banner" class="pwa-install-prompt">
         <div style="display:flex; align-items:center; gap:8px;">
@@ -73,7 +207,7 @@
           </div>
         </div>
         <button id="btn-install-pwa" class="cut-action-btn"
-          style="background:#10b981; border-color:#059669;">Pasang</button>
+          style="background:var(--text-primary); color:var(--bg-dark); border-color:var(--text-primary); font-weight:700;">Pasang</button>
       </div>
 
       <!-- Header Sesi Belanja (Context: Toko & Tanggal) -->
@@ -142,7 +276,7 @@
             <!-- Tautan Cepat Pindah Mode -->
             <div style="text-align:center; margin-top:14px; font-size:11px; color:#94a3b8;">
               <span id="auth-switch-text">Belum punya akun?</span>
-              <button type="button" id="btn-quick-switch-mode" style="background:none; border:none; color:#10b981; font-weight:700; cursor:pointer; text-decoration:underline; padding:0 4px; font-size:11px;">
+              <button type="button" id="btn-quick-switch-mode" style="background:none; border:none; color:var(--text-primary); font-weight:700; cursor:pointer; text-decoration:underline; padding:0 4px; font-size:11px;">
                 Daftar Baru Sekarang →
               </button>
             </div>
@@ -155,7 +289,7 @@
             </div>
 
             <div class="auth-footer-privacy" style="margin-top:14px; font-size:10px; color:#64748b; text-align:center; line-height:1.4; display:flex; align-items:center; justify-content:center; gap:5px;">
-              <i data-lucide="shield-check" style="width:12px; height:12px; color:#10b981;"></i>
+              <i data-lucide="shield-check" style="width:12px; height:12px; color:var(--text-primary);"></i>
               <span>Smart Grocery Demo • Data tersimpan aman di browser Anda.</span>
             </div>
           </form>
@@ -174,18 +308,23 @@
               <span class="brand-subtitle">Budget Safety Tracker</span>
             </div>
           </div>
-          <div class="header-badges-group" style="display:flex; align-items:center; gap:6px;">
-            <div class="session-badge-tag cloud-sync-badge" id="cloud-sync-badge"
-              title="Status Realtime Multi-Device HP ↔ PC">
+          <div class="header-badges-group" style="display:flex; align-items:center; gap:4px; position:relative; z-index:30;">
+            <button type="button" id="btn-toggle-dark-mode" class="theme-toggle-btn" onclick="toggleDarkMode()" title="Ganti Mode Gelap / Terang" aria-label="Ganti Mode Gelap / Terang">
+              <span id="dark-mode-icon">🌙</span>
+              <span id="dark-mode-text">Dark Mode</span>
+            </button>
+            <button type="button" class="session-badge-tag cloud-sync-badge" id="cloud-sync-badge" onclick="handleCloudSyncClick()"
+              title="Status Realtime Multi-Device HP ↔ PC (Klik untuk Sinkron)">
               <span class="pulse-dot" id="cloud-sync-dot"
-                style="display:inline-block; width:6px; height:6px; border-radius:50%; background:#10b981;"></span>
+                style="display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--text-primary);"></span>
               <span id="cloud-sync-text">Cloud Sync</span>
-            </div>
-            <div class="session-badge-tag" id="session-status-badge">
+            </button>
+            <button type="button" class="session-badge-tag session-status-badge" id="session-status-badge" onclick="handleSessionStatusClick()"
+              title="Status Sesi Troli Belanja Aktif (Klik untuk Buka / Lihat Troli)">
               <span class="pulse-dot"
-                style="display:inline-block; width:6px; height:6px; border-radius:50%; background:#10b981;"></span>
-              <span>Troli Aktif</span>
-            </div>
+                style="display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--text-primary);"></span>
+              <span id="session-status-text">Troli Aktif</span>
+            </button>
           </div>
         </div>
 
@@ -264,7 +403,7 @@
                 <span class="stat-value" id="val-budget-limit">Rp 500.000</span>
                 <button type="button" id="btn-edit-budget" class="stat-limit-btn"
                   style="border:none; background:transparent; justify-content: flex-end;">
-                  <i data-lucide="edit-3" style="width:10px; height:10px;"></i> Ubah Limit
+                  <i data-lucide="edit-3" style="width:12px; height:12px;"></i> Ubah Limit
                 </button>
               </div>
             </div>
@@ -310,7 +449,7 @@
               </div>
               <button type="button" id="btn-open-add-product" class="btn-add-product-showcase" onclick="openAddProductModal()" title="Tambah Produk Baru ke Etalase">
                 <i data-lucide="plus" style="width:14px; height:14px;"></i>
-                <span>+ Produk Baru</span>
+                <span>Produk Baru</span>
               </button>
             </div>
 
@@ -336,7 +475,7 @@
             <div class="troli-top-bar">
               <div class="troli-title-col">
                 <div class="section-title">
-                  <i data-lucide="shopping-bag" style="width:16px; height:16px; color:#10b981;"></i>
+                  <i data-lucide="shopping-bag" style="width:16px; height:16px; color:var(--text-primary);"></i>
                   <span>Isi Troli Supermarket</span>
                 </div>
                 <span class="item-counter-pill" id="cart-item-count">0 Item</span>
@@ -349,7 +488,7 @@
 
             <!-- Cart Items Container -->
             <div id="cart-items-list">
-              <!-- Item 1: Beras 5kg (F-04: Harga Naik -> Panah Merah Naik ↑ (+Rp 6.000)) -->
+              <!-- Item 1: Beras 5kg -->
               <div class="grocery-item-card">
                 <div class="item-card-top">
                   <div class="item-title-group">
@@ -357,10 +496,6 @@
                     <div class="item-tags-row">
                       <span class="category-tag">Bahan Pokok</span>
                       <span class="category-tag">pack</span>
-                      <span class="price-comparator-badge badge-price-up" title="Naik dibanding bulan lalu (Rp 68.000)">
-                        <span>&uarr;</span>
-                        <span>+Rp 6.000</span>
-                      </span>
                     </div>
                   </div>
                   <div class="item-card-actions">
@@ -376,7 +511,7 @@
                 <div class="item-card-mid">
                   <div class="price-details">
                     <div class="unit-price-line">
-                      <span style="font-weight:700; color:#34d399;">Rp 74.000 / pack</span>
+                      <span style="font-weight:700; color:var(--text-primary);">Rp 74.000 / pack</span>
                     </div>
                     <div class="item-subtotal-val">Rp 74.000</div>
                   </div>
@@ -387,12 +522,9 @@
                     <button type="button" class="stepper-btn plus-btn" data-id="cart-1">+</button>
                   </div>
                 </div>
-                <div class="item-card-bottom">
-                  <span class="history-tooltip-text">Naik dibanding bulan lalu (Rp 68.000)</span>
-                </div>
               </div>
 
-              <!-- Item 2: Telur 1kg (F-04: Harga Turun -> Panah Hijau Turun ↓ (-Rp 4.000)) -->
+              <!-- Item 2: Telur 1kg -->
               <div class="grocery-item-card">
                 <div class="item-card-top">
                   <div class="item-title-group">
@@ -400,10 +532,6 @@
                     <div class="item-tags-row">
                       <span class="category-tag">Bahan Pokok</span>
                       <span class="category-tag">kg</span>
-                      <span class="price-comparator-badge badge-price-down" title="PROMO! Lebih hemat vs bulan lalu (Rp 32.000)">
-                        <span>&darr;</span>
-                        <span>-Rp 4.000</span>
-                      </span>
                     </div>
                   </div>
                   <div class="item-card-actions">
@@ -419,7 +547,7 @@
                 <div class="item-card-mid">
                   <div class="price-details">
                     <div class="unit-price-line">
-                      <span style="font-weight:700; color:#34d399;">Rp 28.000 / kg</span>
+                      <span style="font-weight:700; color:var(--text-primary);">Rp 28.000 / kg</span>
                     </div>
                     <div class="item-subtotal-val">Rp 28.000</div>
                   </div>
@@ -430,12 +558,9 @@
                     <button type="button" class="stepper-btn plus-btn" data-id="cart-2">+</button>
                   </div>
                 </div>
-                <div class="item-card-bottom">
-                  <span class="history-tooltip-text">Lebih hemat vs bulan lalu (Rp 32.000)</span>
-                </div>
               </div>
 
-              <!-- Item 3: Garam 500g (F-04: Harga Stabil -> Tanda Setara Abu-abu =) -->
+              <!-- Item 3: Garam 500g -->
               <div class="grocery-item-card">
                 <div class="item-card-top">
                   <div class="item-title-group">
@@ -443,10 +568,6 @@
                     <div class="item-tags-row">
                       <span class="category-tag">Bumbu & Dapur</span>
                       <span class="category-tag">pack</span>
-                      <span class="price-comparator-badge badge-price-equal" title="Sama persis dengan bulan lalu (Rp 5.000)">
-                        <span>=</span>
-                        <span>Harga Tetap Stabil</span>
-                      </span>
                     </div>
                   </div>
                   <div class="item-card-actions">
@@ -462,7 +583,7 @@
                 <div class="item-card-mid">
                   <div class="price-details">
                     <div class="unit-price-line">
-                      <span style="font-weight:700; color:#34d399;">Rp 5.000 / pack</span>
+                      <span style="font-weight:700; color:var(--text-primary);">Rp 5.000 / pack</span>
                     </div>
                     <div class="item-subtotal-val">Rp 5.000</div>
                   </div>
@@ -473,12 +594,9 @@
                     <button type="button" class="stepper-btn plus-btn" data-id="cart-3">+</button>
                   </div>
                 </div>
-                <div class="item-card-bottom">
-                  <span class="history-tooltip-text">Sama persis dengan bulan lalu (Rp 5.000)</span>
-                </div>
               </div>
 
-              <!-- Item 4: Minyak Goreng Tropical 2L (F-03: Diskon Bertingkat 50% + 20%) -->
+              <!-- Item 4: Minyak Goreng Tropical 2L -->
               <div class="grocery-item-card">
                 <div class="item-card-top">
                   <div class="item-title-group">
@@ -501,9 +619,7 @@
                 <div class="item-card-mid">
                   <div class="price-details">
                     <div class="unit-price-line">
-                      <span class="discount-ribbon">Diskon: 50% + 20%</span>
-                      <span class="original-price-strike">Rp 38.000</span>
-                      <span style="font-weight:700; color:#34d399;">Rp 15.200 / liter</span>
+                      <span style="font-weight:700; color:var(--text-primary);">Rp 15.200 / liter</span>
                     </div>
                     <div class="item-subtotal-val">Rp 30.400</div>
                   </div>
@@ -514,20 +630,6 @@
                     <button type="button" class="stepper-btn plus-btn" data-id="cart-4">+</button>
                   </div>
                 </div>
-                <div class="item-card-bottom">
-                  <span class="history-tooltip-text">Tercatat di Lotte Mart Grocery - Puri Indah</span>
-                  <span style="font-size:11px; color:#fbbf24; font-weight:700;">Hemat Rp 45.600</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Quick Add Suggestions for College / Boarding Students -->
-            <div class="quick-add-section">
-              <div class="quick-add-title">
-                <span>✨ Item Cepat Favorit Anak Rantau:</span>
-              </div>
-              <div class="quick-add-scroll" id="quick-products-chips">
-                <!-- Dynamically populated from JS -->
               </div>
             </div>
           </section>
@@ -543,7 +645,7 @@
             <!-- Cross-Store Price Intelligence Search -->
             <div class="history-search-card">
               <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
-                <i data-lucide="search" style="width:16px; height:16px; color:#10b981;"></i>
+                <i data-lucide="search" style="width:16px; height:16px; color:var(--text-primary);"></i>
                 <span style="font-weight:700; font-size:14px;">Cek & Bandingkan Harga Lintas Toko</span>
               </div>
               <p style="font-size:11px; color:#94a3b8; margin-bottom:10px;">
@@ -561,11 +663,11 @@
             <!-- History Sesi Belanja List -->
             <div class="section-title-row" style="margin-top:20px;">
               <div class="section-title">
-                <i data-lucide="receipt" style="width:16px; height:16px; color:#10b981;"></i>
+                <i data-lucide="receipt" style="width:16px; height:16px; color:var(--text-primary);"></i>
                 <span>Riwayat Sesi Belanja Lampau</span>
               </div>
               <button id="btn-export-data"
-                style="background:transparent; border:none; color:#10b981; font-size:12px; font-weight:700; cursor:pointer;">
+                style="background:transparent; border:none; color:var(--text-primary); font-size:12px; font-weight:700; cursor:pointer;">
                 Backup / JSON
               </button>
             </div>
@@ -585,7 +687,7 @@
 
             <div class="budget-setup-card">
               <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
-                <div class="safety-icon-bubble" style="background:rgba(16,185,129,0.2); color:#10b981;">
+                <div class="safety-icon-bubble">
                   <i data-lucide="wallet" style="width:18px; height:18px;"></i>
                 </div>
                 <div>
@@ -618,11 +720,11 @@
             <div class="budget-setup-card">
               <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
                 <div style="display:flex; align-items:center; gap:8px;">
-                  <i data-lucide="layers" style="width:16px; height:16px; color:#10b981;"></i>
+                  <i data-lucide="layers" style="width:16px; height:16px; color:var(--text-primary);"></i>
                   <h3 style="font-size:14px; font-weight:700;">Pos Anggaran Kategori Belanja</h3>
                 </div>
                 <button type="button" id="btn-open-cat-budget-modal"
-                  style="background:rgba(16,185,129,0.18); border:1px solid rgba(16,185,129,0.4); color:#34d399; font-size:11px; font-weight:700; padding:5px 10px; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:4px;">
+                  style="background:var(--surface-input); border:1px solid var(--border-subtle); color:var(--text-primary); font-size:11px; font-weight:700; padding:5px 10px; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:4px;">
                   <i data-lucide="plus" style="width:12px; height:12px;"></i> + Tambah Pos
                 </button>
               </div>
@@ -639,7 +741,7 @@
             <!-- Spending Breakdown By Category -->
             <div class="budget-setup-card">
               <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
-                <i data-lucide="pie-chart" style="width:16px; height:16px; color:#10b981;"></i>
+                <i data-lucide="pie-chart" style="width:16px; height:16px; color:var(--text-primary);"></i>
                 <h3 style="font-size:14px; font-weight:700;">Distribusi Kategori Belanja Saat Ini</h3>
               </div>
               <div id="category-distribution-container" class="category-breakdown-list">
@@ -648,10 +750,10 @@
             </div>
 
             <!-- SRS Feature Checklist Verification Info -->
-            <div class="budget-setup-card" style="background:rgba(15,23,42,0.5); border-color:rgba(255,255,255,0.06);">
+            <div class="budget-setup-card" style="background:var(--surface-card); border-color:var(--border-subtle);">
               <div style="display:flex; align-items:center; gap:6px; margin-bottom:8px;">
-                <i data-lucide="check-circle-2" style="width:14px; height:14px; color:#10b981;"></i>
-                <span style="font-size:12px; font-weight:700; color:#e2e8f0;">Status Validasi Fitur SRS</span>
+                <i data-lucide="check-circle-2" style="width:14px; height:14px; color:var(--text-primary);"></i>
+                <span style="font-size:12px; font-weight:700; color:var(--text-primary);">Status Validasi Fitur SRS</span>
               </div>
               <ul style="font-size:11px; color:#94a3b8; list-style:none; line-height:1.6;">
                 <li>✅ <strong>F-01</strong>: Pencatatan Toko, Tanggal, Produk, Kategori, Satuan, Qty, Harga</li>
@@ -811,10 +913,10 @@
 
             <!-- Live Total Preview Before Adding -->
             <div
-              style="background:rgba(0,0,0,0.3); border-radius:12px; padding:12px 14px; display:flex; justify-content:space-between; align-items:center; margin:10px 0;">
+              style="background:var(--surface-input); border-radius:12px; padding:12px 14px; display:flex; justify-content:space-between; align-items:center; margin:10px 0; border:1px solid var(--border-subtle);">
               <div>
                 <div style="font-size:11px; color:#94a3b8;">Subtotal Item Ini:</div>
-                <div id="modal-live-subtotal" style="font-size:18px; font-weight:800; color:#34d399;">Rp 0</div>
+                <div id="modal-live-subtotal" style="font-size:18px; font-weight:800; color:var(--text-primary);">Rp 0</div>
               </div>
               <div id="modal-live-savings" style="text-align:right; font-size:11px; color:#fbbf24; font-weight:700;">
                 Hemat: Rp 0
@@ -840,7 +942,7 @@
             <button id="btn-close-finish-modal" class="sheet-close-btn" type="button">✕</button>
           </div>
 
-          <div style="background:var(--surface-input); border-radius:16px; padding:16px; margin-bottom:16px;">
+          <div style="background:var(--surface-input); border-radius:16px; padding:16px; margin-bottom:16px; border:1px solid var(--border-subtle);">
             <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:13px;">
               <span style="color:#94a3b8;">Supermarket:</span>
               <strong id="finish-store-name">Lotte Mart Grocery - Puri Indah</strong>
@@ -851,7 +953,7 @@
             </div>
             <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:13px;">
               <span style="color:#94a3b8;">Total Belanja:</span>
-              <strong id="finish-total-spent" style="color:#34d399; font-size:16px;">Rp 0</strong>
+              <strong id="finish-total-spent" style="color:var(--text-primary); font-size:16px;">Rp 0</strong>
             </div>
             <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:13px;">
               <span style="color:#94a3b8;">Total Hemat Promo:</span>
@@ -859,7 +961,7 @@
             </div>
             <div style="display:flex; justify-content:space-between; font-size:13px;">
               <span style="color:#94a3b8;">Status Anggaran:</span>
-              <strong id="finish-status-tag" style="color:#10b981;">Aman</strong>
+              <strong id="finish-status-tag" style="color:var(--text-primary);">Aman</strong>
             </div>
           </div>
 
@@ -913,7 +1015,7 @@
           <div class="sheet-handle-bar"></div>
           <div class="sheet-header">
             <div>
-              <h2 id="history-detail-store-title" style="font-size:16px; color:#34d399; margin:0;">Detail Sesi Belanja</h2>
+              <h2 id="history-detail-store-title" style="font-size:16px; color:var(--text-primary); margin:0;">Detail Sesi Belanja</h2>
               <span id="history-detail-date-badge" style="font-size:11px; color:#94a3b8;">Tanggal</span>
             </div>
             <button id="btn-close-history-modal" class="sheet-close-btn" type="button">✕</button>
@@ -921,10 +1023,10 @@
 
           <div class="history-detail-body" style="padding-top:10px;">
             <!-- Key Metric Row -->
-            <div class="budget-stat-grid" style="margin-bottom:12px; background:rgba(0,0,0,0.3); padding:10px; border-radius:12px;">
+            <div class="budget-stat-grid" style="margin-bottom:12px; background:var(--surface-input); padding:10px; border-radius:12px; border:1px solid var(--border-subtle);">
               <div class="stat-item">
                 <span class="stat-title">Total Transaksi</span>
-                <span class="stat-value" id="history-detail-total-spent" style="color:#34d399;">Rp 0</span>
+                <span class="stat-value" id="history-detail-total-spent" style="color:var(--text-primary);">Rp 0</span>
               </div>
               <div class="stat-item" style="text-align:right;">
                 <span class="stat-title">Total Hemat Diskon</span>
@@ -936,7 +1038,7 @@
 
             <!-- List of items in this transaction -->
             <div class="section-title" style="font-size:13px; margin-bottom:8px;">
-              <i data-lucide="shopping-bag" style="width:14px; height:14px; color:#10b981;"></i>
+              <i data-lucide="shopping-bag" style="width:14px; height:14px; color:var(--text-primary);"></i>
               <span id="history-detail-items-count">Daftar Barang (0 Item)</span>
             </div>
             <div id="history-detail-items-table" style="display:flex; flex-direction:column; gap:8px; max-height:40vh; overflow-y:auto; padding-right:4px;">
@@ -996,7 +1098,7 @@
       <!-- MODAL TAMBAH PRODUK BARU KE ETALASE                            -->
       <!-- ============================================================== -->
       <div id="add-etalase-modal-overlay" class="modal-overlay">
-        <div class="bottom-sheet-content" style="max-width: 400px; margin: 0 auto; width: 100%;">
+        <div class="bottom-sheet-content" style="max-width: 420px; margin: 0 auto; width: 100%;">
           <div class="sheet-handle-bar"></div>
           <div class="sheet-header">
             <h2>Tambah Produk Baru</h2>
@@ -1004,14 +1106,16 @@
           </div>
 
           <form id="form-add-etalase-product">
-            <div class="form-group">
-              <label class="form-label">Nama Produk</label>
-              <input type="text" id="new-prod-name" class="form-input-text" placeholder="Contoh: Daging Sapi Segar 500g" required />
+            <!-- Nama Produk -->
+            <div class="form-group" style="margin-bottom: 12px;">
+              <label class="form-label" for="new-prod-name">Nama Produk</label>
+              <input type="text" id="new-prod-name" class="form-input-text" placeholder="Contoh: Daging Sapi Segar 500g" required autocomplete="off" />
             </div>
 
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-              <div class="form-group">
-                <label class="form-label">Kategori</label>
+            <!-- Kategori & Satuan -->
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom: 12px;">
+              <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label" for="new-prod-category">Kategori</label>
                 <div class="styled-select-wrap">
                   <select id="new-prod-category" class="styled-select">
                     <option value="Bahan Pokok">🌾 Bahan Pokok</option>
@@ -1025,8 +1129,8 @@
                   </select>
                 </div>
               </div>
-              <div class="form-group">
-                <label class="form-label">Satuan</label>
+              <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label" for="new-prod-unit">Satuan</label>
                 <div class="styled-select-wrap">
                   <select id="new-prod-unit" class="styled-select">
                     <option value="bungkus">bungkus</option>
@@ -1045,33 +1149,89 @@
               </div>
             </div>
 
-            <div class="form-group">
-              <label class="form-label">Harga Satuan (Rp)</label>
-              <input type="number" id="new-prod-price" class="form-input-numeric" placeholder="25000" min="100" required />
+            <!-- Harga Satuan -->
+            <div class="form-group" style="margin-bottom: 12px;">
+              <label class="form-label" for="new-prod-price">Harga Satuan (Rp)</label>
+              <input type="number" id="new-prod-price" class="form-input-numeric" placeholder="Contoh: 25000" min="100" required inputmode="numeric" />
             </div>
 
-            <div class="form-group">
-              <label class="form-label">Pilih Ikon / Animasi</label>
-              <div class="emoji-picker-row" id="new-prod-emoji-picker">
-                <button type="button" class="emoji-pick-btn active" data-emoji="🌾">🌾</button>
-                <button type="button" class="emoji-pick-btn" data-emoji="🥚">🥚</button>
-                <button type="button" class="emoji-pick-btn" data-emoji="🍳">🍳</button>
-                <button type="button" class="emoji-pick-btn" data-emoji="🥛">🥛</button>
-                <button type="button" class="emoji-pick-btn" data-emoji="🍗">🍗</button>
-                <button type="button" class="emoji-pick-btn" data-emoji="🥩">🥩</button>
-                <button type="button" class="emoji-pick-btn" data-emoji="🥕">🥕</button>
-                <button type="button" class="emoji-pick-btn" data-emoji="🍎">🍎</button>
-                <button type="button" class="emoji-pick-btn" data-emoji="🍌">🍌</button>
-                <button type="button" class="emoji-pick-btn" data-emoji="🍞">🍞</button>
-                <button type="button" class="emoji-pick-btn" data-emoji="🍜">🍜</button>
-                <button type="button" class="emoji-pick-btn" data-emoji="☕">☕</button>
-                <button type="button" class="emoji-pick-btn" data-emoji="🧼">🧼</button>
-                <button type="button" class="emoji-pick-btn" data-emoji="🧂">🧂</button>
+            <!-- Ikon & Gambar Selector -->
+            <div class="form-group" style="margin-bottom: 10px;">
+              <label class="form-label">Ikon / Gambar Produk</label>
+              <div class="modal-media-tabs">
+                <button type="button" class="media-tab-btn active" id="tab-btn-emoji">
+                  <span>✨ Pilih Ikon Emoji</span>
+                </button>
+                <button type="button" class="media-tab-btn" id="tab-btn-photo">
+                  <span>📷 Upload Foto / Gambar</span>
+                </button>
+              </div>
+
+              <!-- Pilihan 1: Emoji Grid -->
+              <div id="media-panel-emoji">
+                <div class="emoji-picker-grid" id="new-prod-emoji-picker">
+                  <button type="button" class="emoji-pick-btn active" data-emoji="🌾" title="Beras / Padi">🌾</button>
+                  <button type="button" class="emoji-pick-btn" data-emoji="🥚" title="Telur">🥚</button>
+                  <button type="button" class="emoji-pick-btn" data-emoji="🍳" title="Minyak / Telur">🍳</button>
+                  <button type="button" class="emoji-pick-btn" data-emoji="🥛" title="Susu">🥛</button>
+                  <button type="button" class="emoji-pick-btn" data-emoji="🍗" title="Ayam">🍗</button>
+                  <button type="button" class="emoji-pick-btn" data-emoji="🥩" title="Daging Sapi">🥩</button>
+                  <button type="button" class="emoji-pick-btn" data-emoji="🐟" title="Ikan Segar">🐟</button>
+                  <button type="button" class="emoji-pick-btn" data-emoji="🦐" title="Udang">🦐</button>
+                  <button type="button" class="emoji-pick-btn" data-emoji="🥕" title="Wortel">🥕</button>
+                  <button type="button" class="emoji-pick-btn" data-emoji="🥦" title="Brokoli">🥦</button>
+                  <button type="button" class="emoji-pick-btn" data-emoji="🥬" title="Sayur">🥬</button>
+                  <button type="button" class="emoji-pick-btn" data-emoji="🍅" title="Tomat">🍅</button>
+                  <button type="button" class="emoji-pick-btn" data-emoji="🍎" title="Apel">🍎</button>
+                  <button type="button" class="emoji-pick-btn" data-emoji="🍌" title="Pisang">🍌</button>
+                  <button type="button" class="emoji-pick-btn" data-emoji="🍞" title="Roti">🍞</button>
+                  <button type="button" class="emoji-pick-btn" data-emoji="🍜" title="Mie Instan">🍜</button>
+                  <button type="button" class="emoji-pick-btn" data-emoji="☕" title="Kopi">☕</button>
+                  <button type="button" class="emoji-pick-btn" data-emoji="🧃" title="Jus Kotak">🧃</button>
+                  <button type="button" class="emoji-pick-btn" data-emoji="🧼" title="Sabun">🧼</button>
+                  <button type="button" class="emoji-pick-btn" data-emoji="🧴" title="Sampo">🧴</button>
+                  <button type="button" class="emoji-pick-btn" data-emoji="🧻" title="Tisu">🧻</button>
+                  <button type="button" class="emoji-pick-btn" data-emoji="🧂" title="Garam / Bumbu">🧂</button>
+                  <button type="button" class="emoji-pick-btn" data-emoji="🍪" title="Biskuit">🍪</button>
+                  <button type="button" class="emoji-pick-btn" data-emoji="🍫" title="Cokelat">🍫</button>
+                </div>
+              </div>
+
+              <!-- Pilihan 2: Photo Upload -->
+              <div id="media-panel-photo" style="display:none;">
+                <input type="file" id="new-prod-image-file" accept="image/*" style="display:none;" />
+                <div class="photo-upload-zone" id="photo-upload-dropzone">
+                  <div style="font-size: 26px; margin-bottom: 4px;">📸</div>
+                  <div style="font-size: 13px; font-weight: 700; color: var(--text-primary);">Pilih Foto Produk</div>
+                  <div style="font-size: 11px; color: #71717a; margin-top: 2px;">Ambil dari Kamera atau Galeri (JPG, PNG)</div>
+                </div>
+
+                <div class="photo-upload-preview" id="photo-upload-preview-wrap" style="display:none; margin-top:8px;">
+                  <img id="photo-upload-thumbnail" class="photo-upload-thumbnail" src="" alt="Pratinjau Foto" />
+                  <div style="display:flex; flex-direction:column; min-width:0;">
+                    <span id="photo-upload-filename" style="font-size:12px; font-weight:600; color:var(--text-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:180px;">foto-produk.jpg</span>
+                    <span style="font-size:10px; color:#10b981; font-weight:600;">✓ Foto Siap Digunakan</span>
+                  </div>
+                  <button type="button" class="btn-remove-photo" id="btn-remove-photo">✕ Hapus</button>
+                </div>
               </div>
             </div>
 
-            <button type="submit" class="btn-submit-item" style="width:100%; height:44px; margin-top:8px;">
-              Tambahkan ke Etalase
+            <!-- Mini Live Card Preview -->
+            <div class="prod-modal-preview-box">
+              <div class="preview-box-label">Pratinjau Kartu di Etalase:</div>
+              <div class="preview-mini-card">
+                <div class="preview-mini-art" id="new-prod-preview-art">🌾</div>
+                <div class="preview-mini-info">
+                  <span class="preview-mini-cat" id="new-prod-preview-cat">Bahan Pokok • bungkus</span>
+                  <span class="preview-mini-name" id="new-prod-preview-name">Nama Produk</span>
+                  <span class="preview-mini-price" id="new-prod-preview-price">Rp 0</span>
+                </div>
+              </div>
+            </div>
+
+            <button type="submit" class="btn-submit-item" style="width:100%; height:46px; margin-top:10px; font-size:14px; font-weight:700;">
+              + Tambahkan ke Etalase
             </button>
           </form>
         </div>
@@ -1117,7 +1277,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 
   <!-- Main Application Script (Self-contained, 100% compatible with file:/// and http://) -->
-  <script src="./js/app.js?v=2.0"></script>
+  <script src="./js/app.js?v=3.2"></script>
 
 </body>
 

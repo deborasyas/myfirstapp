@@ -1420,22 +1420,7 @@ function grabDOMElements() {
   cartFloatingDock = document.getElementById('cart-floating-dock');
 }
 
-function initApp() {
-  grabDOMElements();
-  initClock();
-  populateStoreDropdown();
-  initDateInput();
-  initQuickChips();
-  renderCart();
-  renderBudgetStatus();
-  renderHistorySessions();
-  renderCategoryBreakdown();
-  initModalListeners();
-  initTabs();
-  initPWA();
-  refreshLucideIcons();
-  initRealtimeSync();
-}
+
 
 function initClock() {
   const clockEl = document.getElementById('status-live-time');
@@ -1571,28 +1556,6 @@ function renderCart() {
     const card = document.createElement('div');
     card.className = 'grocery-item-card';
 
-    // F-04 Comparison Tag (Always recalculate against currently selected store)
-    const comp = compareWithStoreHistory(cartManager.getStoreName(), item.name, item.originalPrice);
-    let compBadgeHtml = '';
-
-    if (comp && comp.status !== 'NONE') {
-      compBadgeHtml = `
-        <span class="price-comparator-badge ${comp.badgeClass}" title="${escapeHtml(comp.desc || '')}">
-          <span>${comp.symbol}</span>
-          <span>${escapeHtml(comp.label)}</span>
-        </span>
-      `;
-    }
-
-    // F-03 Discount ribbon
-    let discountTagHtml = '';
-    if (item.discountString && item.discountString !== '0' && item.discountString !== '0%') {
-      discountTagHtml = `
-        <span class="discount-ribbon">Diskon: ${escapeHtml(item.discountString)}</span>
-        <span class="original-price-strike">${CurrencyUtils.formatRupiah(item.originalPrice)}</span>
-      `;
-    }
-
     card.innerHTML = `
       <div class="item-card-top">
         <div class="item-title-group">
@@ -1600,7 +1563,6 @@ function renderCart() {
           <div class="item-tags-row">
             <span class="category-tag">${escapeHtml(item.category)}</span>
             <span class="category-tag">${escapeHtml(item.unit)}</span>
-            ${compBadgeHtml}
           </div>
         </div>
         <div class="item-card-actions">
@@ -1616,8 +1578,7 @@ function renderCart() {
       <div class="item-card-mid">
         <div class="price-details">
           <div class="unit-price-line">
-            ${discountTagHtml}
-            <span style="font-weight:700; color:#34d399;">${CurrencyUtils.formatRupiah(item.finalUnitPrice)} / ${item.unit}</span>
+            <span style="font-weight:700; color:var(--text-primary);">${CurrencyUtils.formatRupiah(item.finalUnitPrice || item.originalPrice)} / ${item.unit}</span>
           </div>
           <div class="item-subtotal-val">${CurrencyUtils.formatRupiah(item.subtotal)}</div>
         </div>
@@ -1628,17 +1589,6 @@ function renderCart() {
           <input type="number" class="stepper-input cart-qty-input" data-id="${item.id}" value="${item.qty}" min="1" inputmode="numeric">
           <button type="button" class="stepper-btn plus-btn" data-id="${item.id}">+</button>
         </div>
-      </div>
-
-      <div class="item-card-bottom">
-        <span class="history-tooltip-text">
-          ${comp && comp.desc ? escapeHtml(comp.desc) : `Tercatat di ${escapeHtml(cartManager.getStoreName())}`}
-        </span>
-        ${item.discountSavings > 0 ? `
-          <span style="font-size:11px; color:#fbbf24; font-weight:700;">
-            Hemat ${CurrencyUtils.formatRupiah(item.discountSavings)}
-          </span>
-        ` : ''}
       </div>
     `;
 
@@ -2149,7 +2099,7 @@ function openFinishModal() {
   
   if (statusTag) {
     statusTag.textContent = evaluation.badgeText;
-    statusTag.style.color = evaluation.isOverBudget ? '#f43f5e' : (evaluation.isWarning ? '#f59e0b' : '#10b981');
+    statusTag.style.color = evaluation.isOverBudget ? '#f43f5e' : (evaluation.isWarning ? '#f59e0b' : 'var(--text-primary)');
   }
 
   finishModalOverlay.classList.add('open');
@@ -2266,7 +2216,7 @@ function renderHistorySessions() {
       <div class="session-numbers-row">
         <div>
           <span style="font-size:11px; color:#94a3b8;">Total Transaksi:</span>
-          <div style="font-size:16px; font-weight:800; color:#34d399;">${totalSpentText}</div>
+          <div style="font-size:16px; font-weight:800; color:var(--text-primary);">${totalSpentText}</div>
         </div>
         <div style="text-align:right;">
           <span style="font-size:11px; color:#94a3b8;">Total Hemat:</span>
@@ -2319,18 +2269,15 @@ function openHistoryDetailModal(session) {
     items.forEach(it => {
       const row = document.createElement('div');
       row.className = 'history-detail-item-row';
-      const hasDiscount = it.discountString && it.discountString !== '0' && it.discountString !== '0%';
       row.innerHTML = `
         <div class="history-item-left">
           <span class="history-item-name">${escapeHtml(it.name)}</span>
           <span class="history-item-sub">
             ${it.qty} ${escapeHtml(it.unit || 'pcs')} • @ ${CurrencyUtils.formatRupiah(it.finalUnitPrice || it.originalPrice)}
-            ${hasDiscount ? `<span style="color:#fbbf24; font-weight:700;">(Diskon: ${escapeHtml(it.discountString)})</span>` : ''}
           </span>
         </div>
         <div class="history-item-right">
           <span class="history-item-subtotal">${CurrencyUtils.formatRupiah(it.subtotal)}</span>
-          ${it.discountSavings > 0 ? `<div class="history-item-savings">Hemat ${CurrencyUtils.formatRupiah(it.discountSavings)}</div>` : ''}
         </div>
       `;
       tableEl.appendChild(row);
@@ -2401,7 +2348,7 @@ function renderCrossStoreResults(query) {
   const cheapest = results[0];
 
   container.innerHTML = `
-    <div style="background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.3); border-radius:8px; padding:6px 10px; font-size:11px; color:#34d399; margin-bottom:8px;">
+    <div style="background:var(--surface-input); border:1px solid var(--border-subtle); border-radius:8px; padding:6px 10px; font-size:11px; color:var(--text-primary); margin-bottom:8px;">
       💡 <strong>Rekomendasi Hemat:</strong> Termurah di <strong>${escapeHtml(cheapest.storeName)}</strong> seharga ${CurrencyUtils.formatRupiah(cheapest.price)} / ${cheapest.unit}!
     </div>
     ${results.map((r, idx) => `
@@ -2518,7 +2465,7 @@ function renderCategoryBudgets() {
 
       <div class="cat-budget-stat-row">
         <span>Batas: <strong>${CurrencyUtils.formatRupiah(cat.limit)}</strong></span>
-        <span>Terpakai: <strong style="color:${percentage > 100 ? '#f43f5e' : (percentage >= 90 ? '#f59e0b' : '#34d399')};">${CurrencyUtils.formatRupiah(spent)}</strong></span>
+        <span>Terpakai: <strong style="color:${percentage > 100 ? '#f43f5e' : (percentage >= 90 ? '#f59e0b' : 'var(--text-primary)')};">${CurrencyUtils.formatRupiah(spent)}</strong></span>
         <span>Sisa: <strong style="color:${remaining < 0 ? '#f43f5e' : '#38bdf8'};">${CurrencyUtils.formatRupiah(Math.abs(remaining))} ${remaining < 0 ? 'lebih' : ''}</strong></span>
       </div>
 
@@ -2634,7 +2581,7 @@ function setSyncBadgeState(state, customText) {
 
   if (state === 'online') {
     badge.classList.add('online');
-    dot.style.background = '#10b981';
+    dot.style.background = 'var(--text-primary)';
     text.textContent = customText || 'Cloud Sync';
     badge.title = 'Terhubung ke Cloud Firestore. Realtime HP ↔ PC aktif.';
   } else if (state === 'offline') {
@@ -2975,16 +2922,12 @@ function initRealtimeSync() {
 
   const cloudBadge = document.getElementById('cloud-sync-badge');
   if (cloudBadge) {
-    cloudBadge.addEventListener('click', () => {
-      const myDev = FirebaseSync.getDeviceType();
-      if (navigator.onLine && currentAuthUser && !currentAuthUser.isGuest) {
-        showToast(`Cloud Realtime Aktif (${myDev}) ↔ HP & PC sinkron`, '🟢');
-        dispatchTrolleySync(true);
-        dispatchBudgetSync();
-      } else {
-        showToast(`Mode Offline: Keranjang aman di LocalStorage (${myDev})`, '🟡');
-      }
-    });
+    cloudBadge.onclick = window.handleCloudSyncClick;
+  }
+
+  const trolleyBadge = document.getElementById('session-status-badge');
+  if (trolleyBadge) {
+    trolleyBadge.onclick = window.handleSessionStatusClick;
   }
 }
 
@@ -3094,7 +3037,7 @@ const DEFAULT_ETALASE_PRODUCTS = [
   { id: 'prod-ayam-1kg', name: 'Daging Ayam Broiler 1kg', category: 'Segar & Protein', unit: 'kg', price: 36000, emoji: '🍗', bgGradient: 'linear-gradient(135deg, #fee2e2, #fecaca)', badge: 'Segar' },
   { id: 'prod-susu-uht', name: 'Susu UHT Full Cream 1L', category: 'Minuman', unit: 'kotak', price: 19500, emoji: '🥛', bgGradient: 'linear-gradient(135deg, #e0f2fe, #bae6fd)', badge: 'Favorit' },
   { id: 'prod-mie-instan', name: 'Mie Instan Goreng Spesial', category: 'Bahan Pokok', unit: 'bungkus', price: 3100, emoji: '🍜', bgGradient: 'linear-gradient(135deg, #ffedd5, #fed7aa)', badge: 'Hemat' },
-  { id: 'prod-bayam', name: 'Sayur Bayam Hijau Segar', category: 'Sayur & Buah', unit: 'ikat', price: 4500, emoji: '🥬', bgGradient: 'linear-gradient(135deg, #dcfce7, #bbf7d0)', badge: 'Segar' },
+  { id: 'prod-bayam', name: 'Sayur Bayam Hijau Segar', category: 'Sayur & Buah', unit: 'ikat', price: 4500, emoji: '🥬', bgGradient: 'linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02))', badge: 'Segar' },
   { id: 'prod-wortel', name: 'Wortel Import Segar 500g', category: 'Sayur & Buah', unit: 'pack', price: 8500, emoji: '🥕', bgGradient: 'linear-gradient(135deg, #ffedd5, #fed7aa)', badge: 'Segar' },
   { id: 'prod-pisang', name: 'Pisang Cavendish Sunpride 1kg', category: 'Sayur & Buah', unit: 'sisir', price: 23000, emoji: '🍌', bgGradient: 'linear-gradient(135deg, #fef9c3, #fef08a)', badge: 'Manis' },
   { id: 'prod-roti-tawar', name: 'Roti Tawar Gandum Kupas', category: 'Bahan Pokok', unit: 'bungkus', price: 16500, emoji: '🍞', bgGradient: 'linear-gradient(135deg, #fef3c7, #fde68a)', badge: 'Sarapan' },
@@ -3161,26 +3104,24 @@ function renderEtalaseGrid() {
   grid.innerHTML = filtered.map(prod => {
     return `
       <div class="etalase-card" data-id="${escapeHtml(prod.id)}">
-        <div class="etalase-art-wrap" style="background: ${prod.bgGradient || 'linear-gradient(135deg, #f0fdf4, #dcfce7)'};">
-          <span class="animated-product-art">${prod.emoji || '🛍️'}</span>
+        <div class="etalase-art-wrap" style="background: ${prod.bgGradient || 'linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02))'};">
+          ${prod.imageUrl ? `<img src="${prod.imageUrl}" alt="${escapeHtml(prod.name)}" class="etalase-custom-img" />` : `<span class="animated-product-art">${prod.emoji || '🛍️'}</span>`}
           ${prod.badge ? `<span class="etalase-badge">${escapeHtml(prod.badge)}</span>` : ''}
         </div>
-        <div class="etalase-info">
+        <div class="etalase-body">
           <div class="etalase-cat-tag">${escapeHtml(prod.category)}</div>
-          <h4 class="etalase-name" title="${escapeHtml(prod.name)}">${escapeHtml(prod.name)}</h4>
-          <div class="etalase-unit-tag">${escapeHtml(prod.unit ? 'per ' + prod.unit : 'per item')}</div>
+          <div class="etalase-item-name" title="${escapeHtml(prod.name)}">${escapeHtml(prod.name)}</div>
+          <div class="etalase-item-unit">${escapeHtml(prod.unit ? 'per ' + prod.unit : 'per item')}</div>
           
-          <div class="etalase-price-row">
-            <div>
-              <div class="etalase-price-num">${CurrencyUtils.formatRupiah(prod.price)}</div>
-            </div>
+          <div class="etalase-price-box">
+            <div class="etalase-price-val">${CurrencyUtils.formatRupiah(prod.price)}</div>
             <button type="button" class="btn-edit-price-pill" onclick="openEditPriceModal('${escapeHtml(prod.id)}')" title="Atur / Sesuaikan Harga">
               ✏️ Atur
             </button>
           </div>
 
           <button type="button" class="btn-add-cart-etalase" onclick="addProductToCart('${escapeHtml(prod.id)}')">
-            <i data-lucide="shopping-cart" style="width:14px; height:14px;"></i>
+            <i data-lucide="shopping-cart" style="width:13px; height:13px;"></i>
             <span>+ Troli</span>
           </button>
         </div>
@@ -3272,10 +3213,44 @@ function closeEditPriceModal() {
   currentEditingProductId = null;
 }
 
+function compressImageFile(file, maxWidth, maxHeight, quality, callback) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const img = new Image();
+    img.onload = function() {
+      let w = img.width;
+      let h = img.height;
+      if (w > maxWidth || h > maxHeight) {
+        const ratio = Math.min(maxWidth / w, maxHeight / h);
+        w = Math.round(w * ratio);
+        h = Math.round(h * ratio);
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      const base64 = canvas.toDataURL('image/jpeg', quality);
+      callback(base64);
+    };
+    img.onerror = function() {
+      callback(null);
+    };
+    img.src = e.target.result;
+  };
+  reader.onerror = function() {
+    callback(null);
+  };
+  reader.readAsDataURL(file);
+}
+
 function openAddProductModal() {
   const modal = document.getElementById('add-etalase-modal-overlay');
   if (modal) {
     modal.classList.add('open', 'active');
+    const nameInput = document.getElementById('new-prod-name');
+    if (nameInput) setTimeout(() => nameInput.focus(), 120);
   }
 }
 
@@ -3384,16 +3359,95 @@ function initEtalase() {
   }
 
   // 5. Add New Product Modal setup & listeners
+  let newProductSelectedEmoji = '🌾';
+  let newProductUploadedImage = null;
+
   const btnOpenAddProduct = document.getElementById('btn-open-add-product');
-  if (btnOpenAddProduct) btnOpenAddProduct.addEventListener('click', openAddProductModal);
+  if (btnOpenAddProduct) {
+    btnOpenAddProduct.onclick = openAddProductModal;
+  }
 
   const btnCloseAddEtalase = document.getElementById('btn-close-add-etalase');
-  if (btnCloseAddEtalase) btnCloseAddEtalase.addEventListener('click', closeAddProductModal);
+  if (btnCloseAddEtalase) {
+    btnCloseAddEtalase.onclick = closeAddProductModal;
+  }
 
   const addModalOverlay = document.getElementById('add-etalase-modal-overlay');
   if (addModalOverlay) {
     addModalOverlay.addEventListener('click', (e) => {
       if (e.target === addModalOverlay) closeAddProductModal();
+    });
+  }
+
+  // Live Preview elements
+  const prevArt = document.getElementById('new-prod-preview-art');
+  const prevCat = document.getElementById('new-prod-preview-cat');
+  const prevName = document.getElementById('new-prod-preview-name');
+  const prevPrice = document.getElementById('new-prod-preview-price');
+
+  const nameInput = document.getElementById('new-prod-name');
+  const catSelect = document.getElementById('new-prod-category');
+  const unitSelect = document.getElementById('new-prod-unit');
+  const priceInput = document.getElementById('new-prod-price');
+
+  function updateAddProductPreview() {
+    if (prevName) {
+      prevName.textContent = nameInput?.value.trim() || 'Nama Produk';
+    }
+    if (prevCat) {
+      const cat = catSelect?.value || 'Bahan Pokok';
+      const unit = unitSelect?.value || 'bungkus';
+      prevCat.textContent = `${cat} • per ${unit}`;
+    }
+    if (prevPrice) {
+      const p = parseInt(priceInput?.value, 10) || 0;
+      prevPrice.textContent = CurrencyUtils.formatRupiah(p);
+    }
+    if (prevArt) {
+      if (newProductUploadedImage) {
+        prevArt.innerHTML = `<img src="${newProductUploadedImage}" alt="Preview" style="width:100%; height:100%; object-fit:cover; border-radius:8px;" />`;
+      } else {
+        prevArt.innerHTML = newProductSelectedEmoji || '🌾';
+      }
+    }
+  }
+
+  if (nameInput) nameInput.addEventListener('input', updateAddProductPreview);
+  if (catSelect) catSelect.addEventListener('change', updateAddProductPreview);
+  if (unitSelect) unitSelect.addEventListener('change', updateAddProductPreview);
+  if (priceInput) priceInput.addEventListener('input', updateAddProductPreview);
+
+  // Media Tab switching (Emoji vs Photo)
+  const tabBtnEmoji = document.getElementById('tab-btn-emoji');
+  const tabBtnPhoto = document.getElementById('tab-btn-photo');
+  const panelEmoji = document.getElementById('media-panel-emoji');
+  const panelPhoto = document.getElementById('media-panel-photo');
+  const fileInput = document.getElementById('new-prod-image-file');
+  const uploadDropzone = document.getElementById('photo-upload-dropzone');
+  const previewWrap = document.getElementById('photo-upload-preview-wrap');
+  const thumbnailImg = document.getElementById('photo-upload-thumbnail');
+  const filenameText = document.getElementById('photo-upload-filename');
+  const btnRemovePhoto = document.getElementById('btn-remove-photo');
+
+  if (tabBtnEmoji && tabBtnPhoto && panelEmoji && panelPhoto) {
+    tabBtnEmoji.addEventListener('click', () => {
+      tabBtnEmoji.classList.add('active');
+      tabBtnPhoto.classList.remove('active');
+      panelEmoji.style.display = 'block';
+      panelPhoto.style.display = 'none';
+      newProductUploadedImage = null;
+      updateAddProductPreview();
+    });
+
+    tabBtnPhoto.addEventListener('click', () => {
+      tabBtnPhoto.classList.add('active');
+      tabBtnEmoji.classList.remove('active');
+      panelPhoto.style.display = 'block';
+      panelEmoji.style.display = 'none';
+      if (thumbnailImg && thumbnailImg.src && thumbnailImg.src.startsWith('data:')) {
+        newProductUploadedImage = thumbnailImg.src;
+      }
+      updateAddProductPreview();
     });
   }
 
@@ -3404,8 +3458,46 @@ function initEtalase() {
       btn.addEventListener('click', () => {
         emojiPicker.querySelectorAll('.emoji-pick-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        newProductSelectedEmoji = btn.getAttribute('data-emoji') || '🛍️';
+        newProductSelectedEmoji = btn.getAttribute('data-emoji') || '🌾';
+        newProductUploadedImage = null;
+        updateAddProductPreview();
       });
+    });
+  }
+
+  // Photo Upload & Preview
+  if (uploadDropzone && fileInput) {
+    uploadDropzone.addEventListener('click', () => fileInput.click());
+  }
+
+  if (fileInput) {
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+
+      compressImageFile(file, 280, 280, 0.78, (base64) => {
+        if (base64) {
+          newProductUploadedImage = base64;
+          if (thumbnailImg) thumbnailImg.src = base64;
+          if (filenameText) filenameText.textContent = file.name || 'foto-produk.jpg';
+          if (uploadDropzone) uploadDropzone.style.display = 'none';
+          if (previewWrap) previewWrap.style.display = 'flex';
+          updateAddProductPreview();
+        } else {
+          showToast('Gagal memproses gambar. Coba file lain.', '⚠️');
+        }
+      });
+    });
+  }
+
+  if (btnRemovePhoto) {
+    btnRemovePhoto.addEventListener('click', () => {
+      newProductUploadedImage = null;
+      if (fileInput) fileInput.value = '';
+      if (thumbnailImg) thumbnailImg.src = '';
+      if (uploadDropzone) uploadDropzone.style.display = 'block';
+      if (previewWrap) previewWrap.style.display = 'none';
+      updateAddProductPreview();
     });
   }
 
@@ -3414,24 +3506,16 @@ function initEtalase() {
   if (formAddProd) {
     formAddProd.addEventListener('submit', (e) => {
       e.preventDefault();
-      const nameInput = document.getElementById('new-prod-name');
-      const catSelect = document.getElementById('new-prod-category');
-      const unitSelect = document.getElementById('new-prod-unit');
-      const priceInput = document.getElementById('new-prod-price');
 
       const name = nameInput?.value.trim() || 'Produk Baru';
       const category = catSelect?.value || 'Bahan Pokok';
-      const unit = unitSelect?.value || 'pcs';
+      const unit = unitSelect?.value || 'bungkus';
       const price = Math.max(100, parseInt(priceInput?.value, 10) || 10000);
 
       const gradients = [
-        'linear-gradient(135deg, #fef3c7, #fde68a)',
-        'linear-gradient(135deg, #e0f2fe, #bae6fd)',
-        'linear-gradient(135deg, #dcfce7, #bbf7d0)',
-        'linear-gradient(135deg, #fce7f3, #fbcfe8)',
-        'linear-gradient(135deg, #ffedd5, #fed7aa)',
-        'linear-gradient(135deg, #f3e8ff, #e9d5ff)',
-        'linear-gradient(135deg, #ccfbf1, #99f6e4)'
+        'linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02))',
+        'linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.03))',
+        'linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.01))'
       ];
       const randBg = gradients[Math.floor(Math.random() * gradients.length)];
 
@@ -3441,7 +3525,8 @@ function initEtalase() {
         category: category,
         unit: unit,
         price: price,
-        emoji: newProductSelectedEmoji || '🛍️',
+        emoji: newProductSelectedEmoji || '🌾',
+        imageUrl: newProductUploadedImage || null,
         bgGradient: randBg,
         badge: 'Baru'
       };
@@ -3450,7 +3535,23 @@ function initEtalase() {
       products.unshift(newProd);
       saveEtalaseProducts(products);
 
+      // Sound and haptic feedback
+      try {
+        if (typeof AudioService !== 'undefined' && AudioService.playAddSuccess) {
+          AudioService.playAddSuccess();
+        } else if (window.SoundEffects && SoundEffects.playBeep) {
+          SoundEffects.playBeep(700, 0.1);
+        }
+        if (typeof triggerHaptic === 'function') triggerHaptic([30, 20, 40]);
+      } catch (err) {}
+
       formAddProd.reset();
+      newProductUploadedImage = null;
+      if (fileInput) fileInput.value = '';
+      if (uploadDropzone) uploadDropzone.style.display = 'block';
+      if (previewWrap) previewWrap.style.display = 'none';
+      if (tabBtnEmoji) tabBtnEmoji.click();
+
       closeAddProductModal();
       renderEtalaseGrid();
       showToast(`Produk "${name}" berhasil ditambahkan ke Etalase!`, '🎉');
@@ -3491,7 +3592,86 @@ function escapeHtml(str) {
     .replace(/'/g, '&#039;');
 }
 
+// ============================================================================
+// DARK MODE / THEME SWITCHER
+// ============================================================================
+function updateThemeButtonUI(isDark) {
+  const icon = document.getElementById('dark-mode-icon');
+  const text = document.getElementById('dark-mode-text');
+  const btn = document.getElementById('btn-toggle-dark-mode');
+  if (icon) icon.textContent = isDark ? '☀️' : '🌙';
+  if (text) text.textContent = isDark ? 'Light' : 'Dark Mode';
+  if (btn) {
+    btn.setAttribute('aria-label', isDark ? 'Beralih ke Mode Terang' : 'Beralih ke Mode Gelap');
+    btn.setAttribute('title', isDark ? 'Mode Terang (Light Mode)' : 'Mode Gelap (Dark Mode)');
+  }
+}
+
+function toggleDarkMode() {
+  const isCurrentlyDark = (document.body && document.body.classList.contains('dark-mode')) || 
+                          document.documentElement.getAttribute('data-theme') === 'dark' ||
+                          document.documentElement.classList.contains('dark-mode');
+  const shouldBeDark = !isCurrentlyDark;
+  
+  if (shouldBeDark) {
+    document.documentElement.setAttribute('data-theme', 'dark');
+    document.documentElement.classList.add('dark-mode');
+    if (document.body) document.body.classList.add('dark-mode');
+    try { localStorage.setItem('smart_grocery_theme', 'dark'); } catch (e) {}
+  } else {
+    document.documentElement.setAttribute('data-theme', 'light');
+    document.documentElement.classList.remove('dark-mode');
+    if (document.body) document.body.classList.remove('dark-mode');
+    try { localStorage.setItem('smart_grocery_theme', 'light'); } catch (e) {}
+  }
+
+  updateThemeButtonUI(shouldBeDark);
+  try {
+    if (typeof refreshLucideIcons === 'function') refreshLucideIcons();
+  } catch (e) {}
+  try {
+    if (window.SoundEffects && SoundEffects.playBeep) {
+      SoundEffects.playBeep(shouldBeDark ? 520 : 680, 0.08);
+    }
+    if (typeof triggerHaptic === 'function') triggerHaptic([30]);
+  } catch (e) {}
+  if (typeof showToast === 'function') {
+    showToast(shouldBeDark ? 'Mode Gelap diaktifkan 🌙' : 'Mode Terang diaktifkan ☀️', shouldBeDark ? '🌙' : '☀️');
+  }
+}
+window.toggleDarkMode = toggleDarkMode;
+
+function initTheme() {
+  let isDark = false;
+  try {
+    const saved = localStorage.getItem('smart_grocery_theme');
+    if (saved) {
+      isDark = (saved === 'dark');
+    }
+  } catch (e) {
+    isDark = false;
+  }
+
+  if (isDark) {
+    document.documentElement.setAttribute('data-theme', 'dark');
+    document.documentElement.classList.add('dark-mode');
+    if (document.body) document.body.classList.add('dark-mode');
+  } else {
+    document.documentElement.setAttribute('data-theme', 'light');
+    document.documentElement.classList.remove('dark-mode');
+    if (document.body) document.body.classList.remove('dark-mode');
+  }
+  updateThemeButtonUI(isDark);
+
+  const btn = document.getElementById('btn-toggle-dark-mode');
+  if (btn) {
+    btn.onclick = toggleDarkMode;
+  }
+}
+window.initTheme = initTheme;
+
 function initApp() {
+  try { initTheme(); } catch (e) { console.warn('initTheme notice:', e); }
   try { grabDOMElements(); } catch (e) { console.warn('grabDOMElements notice:', e); }
   try { initClock(); } catch (e) { console.warn('initClock notice:', e); }
   try { populateStoreDropdown(); } catch (e) { console.warn('populateStoreDropdown notice:', e); }
