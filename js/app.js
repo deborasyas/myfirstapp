@@ -327,7 +327,7 @@ const StorageService = {
       });
       try {
         localStorage.setItem(STORAGE_KEYS.STORES, JSON.stringify(stores));
-      } catch (e) {}
+      } catch (e) { }
       this.notifyChange('stores', stores);
     }
     return stores;
@@ -346,7 +346,7 @@ const StorageService = {
     const merged = Array.from(map.values());
     try {
       localStorage.setItem(STORAGE_KEYS.STORES, JSON.stringify(merged));
-    } catch (e) {}
+    } catch (e) { }
     return merged;
   },
 
@@ -354,7 +354,7 @@ const StorageService = {
     try {
       const data = localStorage.getItem(this.getUserKey(STORAGE_KEYS.SESSION_META));
       if (data) return JSON.parse(data);
-    } catch (e) {}
+    } catch (e) { }
     const today = new Date().toISOString().split('T')[0];
     return {
       storeName: 'Lotte Mart Grocery - Puri Indah',
@@ -366,7 +366,7 @@ const StorageService = {
   saveSessionMeta(meta) {
     try {
       localStorage.setItem(this.getUserKey(STORAGE_KEYS.SESSION_META), JSON.stringify(meta));
-    } catch (e) {}
+    } catch (e) { }
     this.notifyChange('meta', meta);
   },
 
@@ -382,7 +382,7 @@ const StorageService = {
   saveCart(cart) {
     try {
       localStorage.setItem(this.getUserKey(STORAGE_KEYS.CURRENT_CART), JSON.stringify(cart));
-    } catch (e) {}
+    } catch (e) { }
     this.notifyChange('cart', cart);
   },
 
@@ -398,7 +398,7 @@ const StorageService = {
   saveBudget(budget) {
     try {
       localStorage.setItem(this.getUserKey(STORAGE_KEYS.USER_BUDGET), budget.toString());
-    } catch (e) {}
+    } catch (e) { }
     this.notifyChange('budget', { walletLimit: budget, categoryBudgets: this.getCategoryBudgets() });
   },
 
@@ -406,7 +406,7 @@ const StorageService = {
     try {
       const data = localStorage.getItem(this.getUserKey('smart_grocery_cat_budgets'));
       if (data) return JSON.parse(data);
-    } catch (e) {}
+    } catch (e) { }
     return [
       { id: 'cat-b-1', name: 'Bahan Pokok', limit: 250000 },
       { id: 'cat-b-2', name: 'Camilan & Minuman', limit: 75000 },
@@ -417,7 +417,7 @@ const StorageService = {
   saveCategoryBudgets(budgets) {
     try {
       localStorage.setItem(this.getUserKey('smart_grocery_cat_budgets'), JSON.stringify(budgets));
-    } catch (e) {}
+    } catch (e) { }
     this.notifyChange('budget', { walletLimit: this.getBudget(), categoryBudgets: budgets });
   },
 
@@ -467,7 +467,7 @@ const StorageService = {
     }
     try {
       localStorage.setItem(this.getUserKey(STORAGE_KEYS.SESSIONS_HISTORY), JSON.stringify(history));
-    } catch (e) {}
+    } catch (e) { }
     this.notifyChange('history', session);
     return history;
   },
@@ -477,7 +477,7 @@ const StorageService = {
     history = history.filter(h => h.id !== sessionId);
     try {
       localStorage.setItem(this.getUserKey(STORAGE_KEYS.SESSIONS_HISTORY), JSON.stringify(history));
-    } catch (e) {}
+    } catch (e) { }
     this.notifyChange('history_delete', { id: sessionId });
     return history;
   },
@@ -491,7 +491,7 @@ const StorageService = {
     const merged = Array.from(map.values()).sort((a, b) => new Date(b.savedAt || b.date) - new Date(a.savedAt || a.date));
     try {
       localStorage.setItem(this.getUserKey(STORAGE_KEYS.SESSIONS_HISTORY), JSON.stringify(merged));
-    } catch (e) {}
+    } catch (e) { }
     return merged;
   },
 
@@ -599,7 +599,7 @@ const StorageService = {
         date: today,
         notes: 'Sesi Belanja Bulanan Anak Rantau'
       }));
-    } catch (e) {}
+    } catch (e) { }
   }
 };
 
@@ -920,7 +920,7 @@ const BudgetService = {
 
     // Priority 1: Discretionary categories (Camilan, Snack, Minuman)
     const discretionaryCategories = ['Camilan', 'Snack', 'Minuman'];
-    const discretionaryItems = cartItems.filter(item => 
+    const discretionaryItems = cartItems.filter(item =>
       discretionaryCategories.some(cat => item.category?.toLowerCase().includes(cat.toLowerCase()))
     );
 
@@ -1123,7 +1123,7 @@ const FirebaseSync = {
       const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
       const prefix = isMobile ? 'HP' : 'PC';
       id = `${prefix}-${Math.random().toString(36).substring(2, 8)}`;
-      try { localStorage.setItem('smart_grocery_device_id', id); } catch (e) {}
+      try { localStorage.setItem('smart_grocery_device_id', id); } catch (e) { }
     }
     return id;
   },
@@ -1145,8 +1145,8 @@ const FirebaseSync = {
         if (typeof firebase.firestore === 'function') {
           this.db = firebase.firestore();
           try {
-            this.db.enablePersistence({ synchronizeTabs: true }).catch(() => {});
-          } catch (e) {}
+            this.db.enablePersistence({ synchronizeTabs: true }).catch(() => { });
+          } catch (e) { }
         }
         this.isInitialized = true;
         return true;
@@ -1158,7 +1158,7 @@ const FirebaseSync = {
   },
 
   onAuthChange(callback) {
-    if (!this.init() || !this.auth) return () => {};
+    if (!this.init() || !this.auth) return () => { };
     return this.auth.onAuthStateChanged(callback);
   },
 
@@ -1180,7 +1180,7 @@ const FirebaseSync = {
   subscribeActiveTrolley(uid, onUpdateCallback, onStatusCallback) {
     if (!this.init() || !this.db || !uid) {
       if (onStatusCallback) onStatusCallback({ online: false, status: 'offline' });
-      return () => {};
+      return () => { };
     }
 
     const myId = this.getDeviceId();
@@ -1214,7 +1214,7 @@ const FirebaseSync = {
       });
     } catch (e) {
       console.warn('subscribeActiveTrolley warning:', e);
-      return () => {};
+      return () => { };
     }
   },
 
@@ -1244,16 +1244,16 @@ const FirebaseSync = {
   },
 
   subscribeBudget(uid, onUpdateCallback) {
-    if (!this.init() || !this.db || !uid) return () => {};
+    if (!this.init() || !this.db || !uid) return () => { };
     try {
       return this.db.collection('users').doc(uid).collection('budget').doc('current')
         .onSnapshot((doc) => {
           if (doc.exists) {
             onUpdateCallback(doc.data());
           }
-        }, () => {});
+        }, () => { });
     } catch (e) {
-      return () => {};
+      return () => { };
     }
   },
 
@@ -1277,7 +1277,7 @@ const FirebaseSync = {
   },
 
   subscribeHistory(uid, onUpdateCallback) {
-    if (!this.init() || !this.db || !uid) return () => {};
+    if (!this.init() || !this.db || !uid) return () => { };
     try {
       return this.db.collection('users').doc(uid).collection('history')
         .onSnapshot((snapshot) => {
@@ -1285,9 +1285,9 @@ const FirebaseSync = {
           snapshot.forEach(d => list.push({ ...d.data(), id: d.id }));
           list.sort((a, b) => new Date(b.savedAt || b.date) - new Date(a.savedAt || a.date));
           onUpdateCallback(list);
-        }, () => {});
+        }, () => { });
     } catch (e) {
-      return () => {};
+      return () => { };
     }
   },
 
@@ -1317,7 +1317,7 @@ const FirebaseSync = {
   },
 
   subscribeStores(onUpdateCallback) {
-    if (!this.init() || !this.db) return () => {};
+    if (!this.init() || !this.db) return () => { };
     try {
       return this.db.collection('app_metadata').doc('stores').onSnapshot((doc) => {
         if (doc.exists) {
@@ -1326,9 +1326,9 @@ const FirebaseSync = {
             onUpdateCallback(d.stores);
           }
         }
-      }, () => {});
+      }, () => { });
     } catch (e) {
-      return () => {};
+      return () => { };
     }
   },
 
@@ -1354,7 +1354,7 @@ const SoundEffects = {
     if (!this.ctx && (window.AudioContext || window.webkitAudioContext)) {
       try {
         this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-      } catch (e) {}
+      } catch (e) { }
     }
   },
   playBeep(freq = 600, duration = 0.08, type = 'sine') {
@@ -1372,7 +1372,7 @@ const SoundEffects = {
       gain.connect(this.ctx.destination);
       osc.start();
       osc.stop(this.ctx.currentTime + duration);
-    } catch (e) {}
+    } catch (e) { }
   },
   playCoinChime() {
     this.playBeep(880, 0.07, 'sine');
@@ -1386,7 +1386,7 @@ const SoundEffects = {
 
 function triggerHaptic(pattern = [40]) {
   if ('vibrate' in navigator) {
-    try { navigator.vibrate(pattern); } catch (e) {}
+    try { navigator.vibrate(pattern); } catch (e) { }
   }
 }
 
@@ -1496,7 +1496,7 @@ function initClock() {
 
 function refreshLucideIcons() {
   if (window.lucide && typeof window.lucide.createIcons === 'function') {
-    try { window.lucide.createIcons(); } catch (e) {}
+    try { window.lucide.createIcons(); } catch (e) { }
   }
 }
 
@@ -2263,7 +2263,7 @@ function openFinishModal() {
   if (finishDateEl) finishDateEl.textContent = cartManager.getDate();
   if (finishTotalEl) finishTotalEl.textContent = CurrencyUtils.formatRupiah(totals.grandTotal);
   if (finishSavedEl) finishSavedEl.textContent = CurrencyUtils.formatRupiah(totals.totalSavings);
-  
+
   if (statusTag) {
     statusTag.textContent = evaluation.badgeText;
     statusTag.style.color = evaluation.isOverBudget ? '#f43f5e' : (evaluation.isWarning ? '#f59e0b' : 'var(--text-primary)');
@@ -3002,7 +3002,7 @@ function initAuthUI() {
         return;
       }
     }
-  } catch (err) {}
+  } catch (err) { }
 
   // Tampilkan form login jika belum ada sesi aktif
   handleUserSignedOut();
@@ -3019,7 +3019,7 @@ function handleUserSignedIn(user) {
 
   try {
     localStorage.setItem('smart_grocery_active_user', JSON.stringify(user));
-  } catch (e) {}
+  } catch (e) { }
 
   try {
     cartManager = new CartManager();
@@ -3031,7 +3031,7 @@ function handleUserSignedIn(user) {
     renderHistorySessions();
     renderCategoryBreakdown();
     renderCategoryBudgets();
-    try { renderEtalaseGrid(); } catch (e) {}
+    try { renderEtalaseGrid(); } catch (e) { }
     refreshLucideIcons();
   } catch (renderErr) {
     console.warn('handleUserSignedIn render warning:', renderErr);
@@ -3044,7 +3044,7 @@ function handleUserSignedOut() {
   currentAuthUser = null;
   try {
     localStorage.removeItem('smart_grocery_active_user');
-  } catch (e) {}
+  } catch (e) { }
 
   const authView = document.getElementById('auth-view');
   if (authView) authView.style.display = 'flex';
@@ -3344,13 +3344,13 @@ function addProductToCart(productId) {
     if (typeof AudioService !== 'undefined' && AudioService.playAddSuccess) {
       AudioService.playAddSuccess();
     }
-  } catch (e) {}
+  } catch (e) { }
 
   try {
     if (navigator.vibrate) {
       navigator.vibrate([25, 40, 25]);
     }
-  } catch (e) {}
+  } catch (e) { }
 
   // Update views
   renderCart();
@@ -3456,9 +3456,9 @@ function closeEditPriceModal() {
 function compressImageFile(file, maxWidth, maxHeight, quality, callback) {
   if (!file) return;
   const reader = new FileReader();
-  reader.onload = function(e) {
+  reader.onload = function (e) {
     const img = new Image();
-    img.onload = function() {
+    img.onload = function () {
       let w = img.width;
       let h = img.height;
       if (w > maxWidth || h > maxHeight) {
@@ -3474,12 +3474,12 @@ function compressImageFile(file, maxWidth, maxHeight, quality, callback) {
       const base64 = canvas.toDataURL('image/jpeg', quality);
       callback(base64);
     };
-    img.onerror = function() {
+    img.onerror = function () {
       callback(null);
     };
     img.src = e.target.result;
   };
-  reader.onerror = function() {
+  reader.onerror = function () {
     callback(null);
   };
   reader.readAsDataURL(file);
@@ -3791,7 +3791,7 @@ function initEtalase() {
           SoundEffects.playBeep(700, 0.1);
         }
         if (typeof triggerHaptic === 'function') triggerHaptic([30, 20, 40]);
-      } catch (err) {}
+      } catch (err) { }
 
       formAddProd.reset();
       newProductUploadedImage = null;
@@ -3856,33 +3856,33 @@ function updateThemeButtonUI(isDark) {
 }
 
 function toggleDarkMode() {
-  const isCurrentlyDark = (document.body && document.body.classList.contains('dark-mode')) || 
-                          document.documentElement.getAttribute('data-theme') === 'dark' ||
-                          document.documentElement.classList.contains('dark-mode');
+  const isCurrentlyDark = (document.body && document.body.classList.contains('dark-mode')) ||
+    document.documentElement.getAttribute('data-theme') === 'dark' ||
+    document.documentElement.classList.contains('dark-mode');
   const shouldBeDark = !isCurrentlyDark;
-  
+
   if (shouldBeDark) {
     document.documentElement.setAttribute('data-theme', 'dark');
     document.documentElement.classList.add('dark-mode');
     if (document.body) document.body.classList.add('dark-mode');
-    try { localStorage.setItem('smart_grocery_theme', 'dark'); } catch (e) {}
+    try { localStorage.setItem('smart_grocery_theme', 'dark'); } catch (e) { }
   } else {
     document.documentElement.setAttribute('data-theme', 'light');
     document.documentElement.classList.remove('dark-mode');
     if (document.body) document.body.classList.remove('dark-mode');
-    try { localStorage.setItem('smart_grocery_theme', 'light'); } catch (e) {}
+    try { localStorage.setItem('smart_grocery_theme', 'light'); } catch (e) { }
   }
 
   updateThemeButtonUI(shouldBeDark);
   try {
     if (typeof refreshLucideIcons === 'function') refreshLucideIcons();
-  } catch (e) {}
+  } catch (e) { }
   try {
     if (window.SoundEffects && SoundEffects.playBeep) {
       SoundEffects.playBeep(shouldBeDark ? 520 : 680, 0.08);
     }
     if (typeof triggerHaptic === 'function') triggerHaptic([30]);
-  } catch (e) {}
+  } catch (e) { }
   if (typeof showToast === 'function') {
     showToast(shouldBeDark ? 'Mode Gelap diaktifkan 🌙' : 'Mode Terang diaktifkan ☀️', shouldBeDark ? '🌙' : '☀️');
   }
