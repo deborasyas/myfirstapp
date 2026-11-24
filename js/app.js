@@ -2771,7 +2771,9 @@ let syncDebounceTimer = null;
 
 function dispatchTrolleySync(immediate = false) {
   if (StorageService.isApplyingRemote()) return Promise.resolve(false);
-  if (!currentAuthUser || currentAuthUser.isGuest) return Promise.resolve(false);
+  const syncUid = (currentAuthUser && currentAuthUser.uid && !currentAuthUser.isGuest)
+    ? currentAuthUser.uid
+    : 'shared_device_trolley';
 
   const totals = cartManager.getTotals();
   const payload = {
@@ -2789,7 +2791,7 @@ function dispatchTrolleySync(immediate = false) {
 
   return new Promise((resolve) => {
     const doSync = () => {
-      FirebaseSync.syncActiveTrolley(currentAuthUser.uid, payload).then((success) => {
+      FirebaseSync.syncActiveTrolley(syncUid, payload).then((success) => {
         if (success) {
           setSyncBadgeState('online');
         } else {
@@ -2810,12 +2812,14 @@ function dispatchTrolleySync(immediate = false) {
 }
 
 function dispatchBudgetSync() {
-  if (!currentAuthUser || currentAuthUser.isGuest) return;
+  const syncUid = (currentAuthUser && currentAuthUser.uid && !currentAuthUser.isGuest)
+    ? currentAuthUser.uid
+    : 'shared_device_trolley';
   const payload = {
     walletLimit: StorageService.getBudget(),
     categoryBudgets: StorageService.getCategoryBudgets()
   };
-  FirebaseSync.syncBudget(currentAuthUser.uid, payload);
+  FirebaseSync.syncBudget(syncUid, payload);
 }
 
 function bindUserRealtimeListeners(uid) {
@@ -2978,12 +2982,12 @@ function initAuthUI() {
   btnGuestMode?.addEventListener('click', (e) => {
     e.preventDefault();
     handleUserSignedIn({
-      uid: 'guest_demo',
+      uid: 'shared_device_trolley',
       username: 'Tamu Demo',
       displayName: 'Tamu Demo',
-      isGuest: true
+      isGuest: false
     });
-    showToast('Masuk langsung sebagai Tamu Demo', '👤');
+    showToast('Masuk sebagai Tamu (Sinkronisasi Multi-Device Aktif)', '👤');
   });
 
   btnUserLogout?.addEventListener('click', (e) => {
@@ -3037,11 +3041,34 @@ function handleUserSignedIn(user) {
     console.warn('handleUserSignedIn render warning:', renderErr);
   }
 
-  setSyncBadgeState('online', 'Tersimpan Lokal');
+  // F-06B: Aktifkan listener realtime Firestore onSnapshot untuk multi-device sync
+  const syncUid = (user && user.uid && !user.isGuest) ? user.uid : 'shared_device_trolley';
+  try {
+    bindUserRealtimeListeners(syncUid);
+    dispatchTrolleySync(true);
+    dispatchBudgetSync();
+  } catch (syncErr) {
+    console.warn('Realtime sync bind warning:', syncErr);
+  }
+
+  setSyncBadgeState('online', 'Cloud Sync Aktif');
 }
 
 function handleUserSignedOut() {
   currentAuthUser = null;
+  if (activeTrolleyUnsubscribe) {
+    try { activeTrolleyUnsubscribe(); } catch (e) { }
+    activeTrolleyUnsubscribe = null;
+  }
+  if (budgetUnsubscribe) {
+    try { budgetUnsubscribe(); } catch (e) { }
+    budgetUnsubscribe = null;
+  }
+  if (historyUnsubscribe) {
+    try { historyUnsubscribe(); } catch (e) { }
+    historyUnsubscribe = null;
+  }
+
   try {
     localStorage.removeItem('smart_grocery_active_user');
   } catch (e) { }
