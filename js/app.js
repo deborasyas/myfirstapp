@@ -2437,14 +2437,16 @@ function openHistoryDetailModal(session) {
       const row = document.createElement('div');
       row.className = 'history-detail-item-row';
       row.innerHTML = `
-        <div class="history-item-left">
-          <span class="history-item-name">${escapeHtml(it.name)}</span>
-          <span class="history-item-sub">
+        <div class="history-item-left" style="display:flex; flex-direction:column; gap:3px; flex:1;">
+          <span class="history-item-name" style="font-size:14px; font-weight:700; color:var(--text-primary); line-height:1.25;">
+            ${escapeHtml(it.name || 'Produk')}
+          </span>
+          <span class="history-item-sub" style="font-size:12px; color:var(--text-muted); font-weight:500;">
             ${it.qty} ${escapeHtml(it.unit || 'pcs')} • @ ${CurrencyUtils.formatRupiah(it.finalUnitPrice || it.originalPrice)}
           </span>
         </div>
-        <div class="history-item-right">
-          <span class="history-item-subtotal">${CurrencyUtils.formatRupiah(it.subtotal)}</span>
+        <div class="history-item-right" style="text-align:right;">
+          <span class="history-item-subtotal" style="font-size:14px; font-weight:800; color:var(--text-primary);">${CurrencyUtils.formatRupiah(it.subtotal)}</span>
         </div>
       `;
       tableEl.appendChild(row);
