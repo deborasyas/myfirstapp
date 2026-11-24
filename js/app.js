@@ -495,6 +495,50 @@ const StorageService = {
     return merged;
   },
 
+  matchProductNames(query, targetName) {
+    if (!query || !targetName) return false;
+    const q = query.trim().toLowerCase();
+    const t = targetName.trim().toLowerCase();
+    if (q === t) return true;
+    if (q.includes(t) || t.includes(q)) return true;
+
+    // Clean strings by removing brackets, punctuation
+    const clean = s => s.replace(/[\(\)\[\],\.\-\/]/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
+    const cq = clean(q);
+    const ct = clean(t);
+    if (cq === ct || cq.includes(ct) || ct.includes(cq)) return true;
+
+    const qTokens = cq.split(' ').filter(w => w.length > 1);
+    const tTokens = ct.split(' ').filter(w => w.length > 1);
+
+    // If one is subset of another
+    const isSubset = (sub, sup) => sub.every(tok => sup.some(st => st === tok || st.includes(tok) || tok.includes(st)));
+    if (isSubset(tTokens, qTokens) || isSubset(qTokens, tTokens)) return true;
+
+    // Key grocery nouns matching
+    const keyNouns = [
+      'beras', 'minyak', 'telur', 'ayam', 'susu', 'mie', 'indomie',
+      'garam', 'gula', 'kopi', 'teh', 'sabun', 'deterjen', 'rinso',
+      'sunlight', 'lifebuoy', 'pepsodent', 'chitato', 'oreo', 'roti',
+      'bawang', 'bayam', 'wortel', 'pisang'
+    ];
+    for (const noun of keyNouns) {
+      if (qTokens.includes(noun) && tTokens.includes(noun)) {
+        const qNum = q.match(/\d+(\s*)(kg|g|gr|l|liter|ml|pcs|pack|dus)/i);
+        const tNum = t.match(/\d+(\s*)(kg|g|gr|l|liter|ml|pcs|pack|dus)/i);
+        if (qNum && tNum) {
+          const qSize = qNum[0].replace(/\s+/g, '').toLowerCase();
+          const tSize = tNum[0].replace(/\s+/g, '').toLowerCase();
+          if (qSize === tSize) return true;
+        } else {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  },
+
   findProductHistoricalPrice(storeName, productName) {
     if (!productName || !productName.trim()) return null;
     const cleanQuery = productName.trim().toLowerCase();
@@ -504,8 +548,7 @@ const StorageService = {
     for (const session of history) {
       if (session.storeName && session.storeName.toLowerCase() === storeName.toLowerCase()) {
         const matchedItem = session.items?.find(it => {
-          const itName = it.name.trim().toLowerCase();
-          return itName === cleanQuery || itName.includes(cleanQuery) || cleanQuery.includes(itName);
+          return this.matchProductNames(cleanQuery, it.name);
         });
         if (matchedItem) {
           return {
@@ -525,8 +568,7 @@ const StorageService = {
     // 2. Cross-store comparison
     for (const session of history) {
       const matchedItem = session.items?.find(it => {
-        const itName = it.name.trim().toLowerCase();
-        return itName === cleanQuery || itName.includes(cleanQuery) || cleanQuery.includes(itName);
+        return this.matchProductNames(cleanQuery, it.name);
       });
       if (matchedItem) {
         return {
@@ -575,14 +617,19 @@ function compareWithStoreHistory(storeName, productName, currentPrice) {
   if (!hist || !hist.found) {
     return {
       status: 'NEW',
-      symbol: '\u2728',
+      symbol: '✨',
+      iconEmoji: '✨',
       badgeClass: 'badge-new',
+      statusClass: 'status-new',
       label: 'Produk Baru',
-      desc: 'Belum ada riwayat di toko ini',
+      title: 'Produk Baru',
+      desc: `Belum ada riwayat di toko ${storeName || 'ini'}`,
       diff: 0,
       diffPercent: 0,
+      diffFormatted: 'Baru',
       historicalPrice: 0,
-      historicalDate: null
+      historicalDate: null,
+      inSameStore: false
     };
   }
 
@@ -595,8 +642,12 @@ function compareWithStoreHistory(storeName, productName, currentPrice) {
     return {
       status: 'UP',
       symbol: '\u2191',
+      iconEmoji: '🔺',
       badgeClass: 'badge-price-up',
-      label: `+${CurrencyUtils.formatRupiah(diff)}`,
+      statusClass: 'status-up',
+      label: 'Harga Naik',
+      title: 'Harga Naik',
+      diffFormatted: `+${CurrencyUtils.formatRupiah(diff)} (+${diffPercent}%)`,
       desc: `Naik dibanding ${periodLabel} (${CurrencyUtils.formatRupiah(prevPrice)})`,
       diff: diff,
       diffPercent: diffPercent,
@@ -609,8 +660,12 @@ function compareWithStoreHistory(storeName, productName, currentPrice) {
     return {
       status: 'DOWN',
       symbol: '\u2193',
+      iconEmoji: '🟢',
       badgeClass: 'badge-price-down',
-      label: `-${CurrencyUtils.formatRupiah(Math.abs(diff))}`,
+      statusClass: 'status-down',
+      label: 'Harga Turun',
+      title: 'Harga Turun',
+      diffFormatted: `-${CurrencyUtils.formatRupiah(Math.abs(diff))} (${diffPercent}%)`,
       desc: `PROMO! Lebih hemat vs ${periodLabel} (${CurrencyUtils.formatRupiah(prevPrice)})`,
       diff: diff,
       diffPercent: diffPercent,
@@ -622,9 +677,13 @@ function compareWithStoreHistory(storeName, productName, currentPrice) {
   } else {
     return {
       status: 'EQUAL',
-      symbol: '=',
+      symbol: '▬',
+      iconEmoji: '⚖️',
       badgeClass: 'badge-price-equal',
-      label: 'Harga Tetap Stabil',
+      statusClass: 'status-equal',
+      label: 'Harga Stabil',
+      title: 'Harga Stabil',
+      diffFormatted: 'Stabil (0%)',
       desc: `Sama persis dengan ${periodLabel} (${CurrencyUtils.formatRupiah(prevPrice)})`,
       diff: 0,
       diffPercent: 0,
@@ -643,6 +702,7 @@ class CartManager {
   constructor() {
     this.items = StorageService.getCart();
     this.sessionMeta = StorageService.getSessionMeta();
+    this.refreshComparisons();
   }
 
   getItems() {
@@ -1483,6 +1543,7 @@ function initDateInput() {
       cartManager.setStore(e.target.value);
       showToast(`Lokasi Toko: ${e.target.value}`);
       renderCart();
+      renderEtalaseGrid();
     });
   }
 }
@@ -1556,6 +1617,34 @@ function renderCart() {
     const card = document.createElement('div');
     card.className = 'grocery-item-card';
 
+    // F-04 Realtime Price Comparator Badge vs Bulan Lalu
+    const comp = item.comparison || compareWithStoreHistory(cartManager.getStoreName(), item.name, item.originalPrice);
+    let compHtml = '';
+    if (comp && comp.status !== 'NONE') {
+      let arrowPill = '';
+      if (comp.status === 'UP') {
+        arrowPill = `<span class="comp-arrow-pill"><span class="comp-arrow">↑</span> Naik</span>`;
+      } else if (comp.status === 'DOWN') {
+        arrowPill = `<span class="comp-arrow-pill"><span class="comp-arrow">↓</span> Turun</span>`;
+      } else if (comp.status === 'EQUAL') {
+        arrowPill = `<span class="comp-arrow-pill"><span class="comp-arrow">▬</span> Stabil</span>`;
+      } else {
+        arrowPill = `<span class="comp-arrow-pill"><span class="comp-arrow">✨</span> Produk Baru</span>`;
+      }
+
+      compHtml = `
+        <div class="price-comparator-badge ${comp.badgeClass}">
+          <div style="display:flex; flex-direction:column; gap:3px; flex:1;">
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:6px; flex-wrap:wrap;">
+              ${arrowPill}
+              <span class="comp-diff-val">${escapeHtml(comp.diffFormatted || comp.label)}</span>
+            </div>
+            <div class="comp-desc-text">${escapeHtml(comp.desc)}</div>
+          </div>
+        </div>
+      `;
+    }
+
     card.innerHTML = `
       <div class="item-card-top">
         <div class="item-title-group">
@@ -1590,6 +1679,8 @@ function renderCart() {
           <button type="button" class="stepper-btn plus-btn" data-id="${item.id}">+</button>
         </div>
       </div>
+
+      ${compHtml}
     `;
 
     // Inline Card Listeners (F-02: Instant Qty recalculation without reload)
@@ -1615,6 +1706,15 @@ function renderCart() {
       renderBudgetStatus();
     });
 
+    qtyInput.addEventListener('input', (e) => {
+      const newQ = parseInt(e.target.value, 10);
+      if (!isNaN(newQ) && newQ >= 1) {
+        cartManager.updateQty(item.id, newQ);
+        renderCart();
+        renderBudgetStatus();
+      }
+    });
+
     qtyInput.addEventListener('change', (e) => {
       const newQ = parseInt(e.target.value, 10);
       if (!isNaN(newQ) && newQ >= 1) {
@@ -1625,12 +1725,7 @@ function renderCart() {
     });
 
     btnTrash.addEventListener('click', () => {
-      SoundEffects.playBeep(300, 0.08);
-      triggerHaptic([40]);
-      cartManager.removeItem(item.id);
-      showToast(`Dihapus dari troli: ${item.name}`, '🗑️');
-      renderCart();
-      renderBudgetStatus();
+      openDeleteConfirmModal(item);
     });
 
     btnEdit.addEventListener('click', () => {
@@ -1766,10 +1861,23 @@ function initModalListeners() {
     });
   }
 
-  if (inputItemQty) inputItemQty.addEventListener('input', updateModalLiveCalculation);
+  if (inputItemQty) {
+    inputItemQty.addEventListener('input', (e) => {
+      const val = parseInt(e.target.value, 10);
+      if (val <= 0 || (typeof e.target.value === 'string' && e.target.value.includes('-'))) {
+        showToast('Kuantitas (Qty) minimal 1!', '⚠️');
+        e.target.value = '1';
+      }
+      updateModalLiveCalculation();
+    });
+  }
 
   if (inputItemPrice) {
     inputItemPrice.addEventListener('input', (e) => {
+      if (e.target.value && e.target.value.includes('-')) {
+        showToast('Harga tidak boleh bernilai minus!', '⚠️');
+        e.target.value = e.target.value.replace(/-/g, '');
+      }
       const rawVal = CurrencyUtils.parseRupiah(e.target.value);
       e.target.value = rawVal > 0 ? CurrencyUtils.formatRupiah(rawVal) : '';
       updateModalLiveCalculation();
@@ -1803,18 +1911,33 @@ function initModalListeners() {
     itemForm.addEventListener('submit', (e) => {
       e.preventDefault();
       const name = inputItemName ? inputItemName.value.trim() : '';
-      const price = inputItemPrice ? CurrencyUtils.parseRupiah(inputItemPrice.value) : 0;
-      const qty = inputItemQty ? (parseInt(inputItemQty.value, 10) || 1) : 1;
+      const rawPriceStr = inputItemPrice ? inputItemPrice.value.trim() : '';
+      const rawQtyStr = inputItemQty ? inputItemQty.value.trim() : '1';
+      const qty = parseInt(rawQtyStr, 10) || 0;
       const category = inputItemCategory ? inputItemCategory.value : 'Bahan Pokok';
       const unit = inputItemUnit ? inputItemUnit.value : 'pcs';
       const discount = inputItemDiscount ? inputItemDiscount.value : '0';
 
+      // F-01 Validasi Form Aktif (Cegah field kosong & minus)
       if (!name) {
-        showToast('Masukkan nama produk!', '⚠️');
+        showToast('Nama item tidak boleh kosong!', '⚠️');
+        inputItemName?.focus();
         return;
       }
+      if (rawPriceStr.includes('-')) {
+        showToast('Harga tidak boleh bernilai minus!', '⚠️');
+        inputItemPrice?.focus();
+        return;
+      }
+      const price = CurrencyUtils.parseRupiah(rawPriceStr);
       if (price <= 0) {
-        showToast('Masukkan harga satuan yang valid!', '⚠️');
+        showToast('Harga tidak boleh kosong atau bernilai Rp 0!', '⚠️');
+        inputItemPrice?.focus();
+        return;
+      }
+      if (qty <= 0 || rawQtyStr.includes('-')) {
+        showToast('Kuantitas (Qty) minimal 1 dan tidak boleh minus!', '⚠️');
+        inputItemQty?.focus();
         return;
       }
 
@@ -1881,6 +2004,27 @@ function initModalListeners() {
         switchTab('riwayat');
       } catch (err) {
         showToast(err.message, '⚠️');
+      }
+    });
+  }
+
+  // UX: Modal Konfirmasi Hapus Aman (Troli)
+  const btnCancelDelete = document.getElementById('btn-cancel-delete');
+  const btnConfirmDelete = document.getElementById('btn-confirm-delete');
+  if (btnCancelDelete) {
+    btnCancelDelete.addEventListener('click', closeDeleteConfirmModal);
+  }
+  if (btnConfirmDelete) {
+    btnConfirmDelete.addEventListener('click', () => {
+      if (pendingDeleteItem) {
+        const itemName = pendingDeleteItem.name;
+        cartManager.removeItem(pendingDeleteItem.id);
+        SoundEffects.playBeep(300, 0.08);
+        triggerHaptic([40]);
+        showToast(`Dihapus dari troli: ${itemName}`, '🗑️');
+        closeDeleteConfirmModal();
+        renderCart();
+        renderBudgetStatus();
       }
     });
   }
@@ -2028,6 +2172,29 @@ function closeItemModal() {
   if (itemModalOverlay) itemModalOverlay.classList.remove('open');
 }
 
+// UX: Modal Konfirmasi Hapus Aman
+let pendingDeleteItem = null;
+
+function openDeleteConfirmModal(item) {
+  pendingDeleteItem = item;
+  const overlay = document.getElementById('confirm-delete-modal-overlay');
+  const nameEl = document.getElementById('confirm-delete-item-name');
+  if (nameEl) {
+    nameEl.innerHTML = `Apakah Anda yakin ingin menghapus <strong>"${escapeHtml(item.name)}"</strong> dari keranjang belanja?`;
+  }
+  if (overlay) {
+    overlay.classList.add('open', 'active');
+  }
+}
+
+function closeDeleteConfirmModal() {
+  pendingDeleteItem = null;
+  const overlay = document.getElementById('confirm-delete-modal-overlay');
+  if (overlay) {
+    overlay.classList.remove('open', 'active');
+  }
+}
+
 function updateModalLiveCalculation() {
   if (!inputItemPrice || !modalLiveSubtotal) return;
   const price = CurrencyUtils.parseRupiah(inputItemPrice.value);
@@ -2075,7 +2242,7 @@ function updateModalPriceComparison() {
     modalPriceComparator.style.display = 'flex';
     modalPriceComparator.className = `modal-comparator-preview ${comp.badgeClass}`;
     if (modalComparatorIcon) modalComparatorIcon.textContent = comp.symbol;
-    if (modalComparatorText) modalComparatorText.innerHTML = `<strong>${escapeHtml(comp.label)}</strong>: ${escapeHtml(comp.desc)}`;
+    if (modalComparatorText) modalComparatorText.innerHTML = `<strong>${escapeHtml(comp.label)}</strong> (${escapeHtml(comp.diffFormatted)}): ${escapeHtml(comp.desc)}`;
   } else {
     modalPriceComparator.style.display = 'none';
   }
@@ -3031,20 +3198,22 @@ function initPWA() {
 // ============================================================================
 
 const DEFAULT_ETALASE_PRODUCTS = [
-  { id: 'prod-beras-5kg', name: 'Beras Ramos Super 5kg', category: 'Bahan Pokok', unit: 'karung', price: 74500, emoji: '🌾', bgGradient: 'linear-gradient(135deg, #fef3c7, #fde68a)', badge: 'Bahan Pokok' },
-  { id: 'prod-minyak-2l', name: 'Minyak Goreng Sawit 2L', category: 'Bahan Pokok', unit: 'pouch', price: 34500, emoji: '🍳', bgGradient: 'linear-gradient(135deg, #fef9c3, #fef08a)', badge: 'Promo' },
-  { id: 'prod-telur-1kg', name: 'Telur Ayam Negeri 1kg', category: 'Segar & Protein', unit: 'kg', price: 28000, emoji: '🥚', bgGradient: 'linear-gradient(135deg, #ffedd5, #fed7aa)', badge: 'Segar' },
+  { id: 'prod-beras-5kg', name: 'Beras 5kg', category: 'Bahan Pokok', unit: 'pack', price: 74000, emoji: '🌾', bgGradient: 'linear-gradient(135deg, #fef3c7, #fde68a)', badge: 'Bahan Pokok' },
+  { id: 'prod-telur-1kg', name: 'Telur 1kg', category: 'Bahan Pokok', unit: 'kg', price: 28000, emoji: '🥚', bgGradient: 'linear-gradient(135deg, #ffedd5, #fed7aa)', badge: 'Promo' },
+  { id: 'prod-garam-500g', name: 'Garam 500g', category: 'Bumbu & Dapur', unit: 'pack', price: 5000, emoji: '🧂', bgGradient: 'linear-gradient(135deg, #f1f5f9, #e2e8f0)', badge: 'Stabil' },
+  { id: 'prod-minyak-2l', name: 'Minyak Goreng Tropical 2L', category: 'Bahan Pokok', unit: 'liter', price: 43000, emoji: '🍳', bgGradient: 'linear-gradient(135deg, #fef9c3, #fef08a)', badge: 'Bahan Pokok' },
+  { id: 'prod-wajan-promo', name: 'Wajan Promo Anti Lengket', category: 'Bumbu & Dapur', unit: 'pcs', price: 100000, emoji: '🍳', bgGradient: 'linear-gradient(135deg, #fef3c7, #fde68a)', badge: 'Promo 50%+20%' },
+  { id: 'prod-susu-uht', name: 'Ultra Milk Cokelat 1L', category: 'Minuman', unit: 'pcs', price: 19500, emoji: '🥛', bgGradient: 'linear-gradient(135deg, #e0f2fe, #bae6fd)', badge: 'Favorit' },
+  { id: 'prod-sunlight', name: 'Sunlight Jeruk Nipis 750ml', category: 'Kebersihan', unit: 'pack', price: 17000, emoji: '🧼', bgGradient: 'linear-gradient(135deg, #ccfbf1, #99f6e4)', badge: 'Bersih' },
+  { id: 'prod-rinso', name: 'Rinso Cair Molto 750ml', category: 'Kebersihan', unit: 'pack', price: 22000, emoji: '🧺', bgGradient: 'linear-gradient(135deg, #e0e7ff, #c7d2fe)', badge: 'Harum' },
+  { id: 'prod-lifebuoy', name: 'Sabun Mandi Lifebuoy Refill 450ml', category: 'Kebersihan', unit: 'pack', price: 26000, emoji: '🫧', bgGradient: 'linear-gradient(135deg, #fee2e2, #fecaca)', badge: 'Segar' },
   { id: 'prod-ayam-1kg', name: 'Daging Ayam Broiler 1kg', category: 'Segar & Protein', unit: 'kg', price: 36000, emoji: '🍗', bgGradient: 'linear-gradient(135deg, #fee2e2, #fecaca)', badge: 'Segar' },
-  { id: 'prod-susu-uht', name: 'Susu UHT Full Cream 1L', category: 'Minuman', unit: 'kotak', price: 19500, emoji: '🥛', bgGradient: 'linear-gradient(135deg, #e0f2fe, #bae6fd)', badge: 'Favorit' },
   { id: 'prod-mie-instan', name: 'Mie Instan Goreng Spesial', category: 'Bahan Pokok', unit: 'bungkus', price: 3100, emoji: '🍜', bgGradient: 'linear-gradient(135deg, #ffedd5, #fed7aa)', badge: 'Hemat' },
   { id: 'prod-bayam', name: 'Sayur Bayam Hijau Segar', category: 'Sayur & Buah', unit: 'ikat', price: 4500, emoji: '🥬', bgGradient: 'linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02))', badge: 'Segar' },
   { id: 'prod-wortel', name: 'Wortel Import Segar 500g', category: 'Sayur & Buah', unit: 'pack', price: 8500, emoji: '🥕', bgGradient: 'linear-gradient(135deg, #ffedd5, #fed7aa)', badge: 'Segar' },
   { id: 'prod-pisang', name: 'Pisang Cavendish Sunpride 1kg', category: 'Sayur & Buah', unit: 'sisir', price: 23000, emoji: '🍌', bgGradient: 'linear-gradient(135deg, #fef9c3, #fef08a)', badge: 'Manis' },
   { id: 'prod-roti-tawar', name: 'Roti Tawar Gandum Kupas', category: 'Bahan Pokok', unit: 'bungkus', price: 16500, emoji: '🍞', bgGradient: 'linear-gradient(135deg, #fef3c7, #fde68a)', badge: 'Sarapan' },
   { id: 'prod-kopi', name: 'Kopi Bubuk Robusta Asli 150g', category: 'Minuman', unit: 'bungkus', price: 14000, emoji: '☕', bgGradient: 'linear-gradient(135deg, #f3e8ff, #e9d5ff)', badge: 'Aroma' },
-  { id: 'prod-sabun-cuci', name: 'Sabun Cuci Piring Jeruk Nipis 780ml', category: 'Kebersihan', unit: 'pouch', price: 12500, emoji: '🧼', bgGradient: 'linear-gradient(135deg, #ccfbf1, #99f6e4)', badge: 'Bersih' },
-  { id: 'prod-deterjen', name: 'Deterjen Bubuk Konsentrat 800g', category: 'Kebersihan', unit: 'pack', price: 21000, emoji: '🧺', bgGradient: 'linear-gradient(135deg, #e0e7ff, #c7d2fe)', badge: 'Harum' },
-  { id: 'prod-garam', name: 'Garam Dapur Beryodium 250g', category: 'Bumbu & Dapur', unit: 'bungkus', price: 4000, emoji: '🧂', bgGradient: 'linear-gradient(135deg, #f1f5f9, #e2e8f0)', badge: 'Dapur' },
   { id: 'prod-bawang', name: 'Bawang Merah Brebes 250g', category: 'Bumbu & Dapur', unit: 'pack', price: 12500, emoji: '🧅', bgGradient: 'linear-gradient(135deg, #fce7f3, #fbcfe8)', badge: 'Dapur' },
   { id: 'prod-teh', name: 'Teh Celup Hitam Wangi Melati', category: 'Minuman', unit: 'kotak', price: 8500, emoji: '🫖', bgGradient: 'linear-gradient(135deg, #ffedd5, #fed7aa)', badge: 'Segar' }
 ];
@@ -3056,7 +3225,7 @@ let newProductSelectedEmoji = '🌾';
 
 function getEtalaseProducts() {
   try {
-    const raw = localStorage.getItem('smart_grocery_etalase_products');
+    const raw = localStorage.getItem('smart_grocery_etalase_products_v5');
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) return parsed;
@@ -3069,6 +3238,7 @@ function getEtalaseProducts() {
 
 function saveEtalaseProducts(products) {
   try {
+    localStorage.setItem('smart_grocery_etalase_products_v5', JSON.stringify(products));
     localStorage.setItem('smart_grocery_etalase_products', JSON.stringify(products));
   } catch (e) {
     console.error('Failed to save etalase products:', e);
@@ -3079,6 +3249,7 @@ function renderEtalaseGrid() {
   const grid = document.getElementById('etalase-products-grid');
   if (!grid) return;
 
+  const currentStore = cartManager ? cartManager.getStoreName() : 'Lotte Mart Grocery - Puri Indah';
   const allProducts = getEtalaseProducts();
   const filtered = allProducts.filter(p => {
     const matchCat = (!etalaseActiveCategory || etalaseActiveCategory === 'Semua' || etalaseActiveCategory === 'all') ||
@@ -3102,6 +3273,18 @@ function renderEtalaseGrid() {
   }
 
   grid.innerHTML = filtered.map(prod => {
+    const comp = compareWithStoreHistory(currentStore, prod.name, prod.price);
+    let compPill = '';
+    if (comp && comp.status === 'UP') {
+      compPill = `<span class="etalase-comp-pill comp-up" title="${escapeHtml(comp.desc)}"><span style="font-size:11px;">↑</span> Naik ${CurrencyUtils.formatRupiah(comp.diff)} (+${comp.diffPercent}%)</span>`;
+    } else if (comp && comp.status === 'DOWN') {
+      compPill = `<span class="etalase-comp-pill comp-down" title="${escapeHtml(comp.desc)}"><span style="font-size:11px;">↓</span> Turun ${CurrencyUtils.formatRupiah(Math.abs(comp.diff))} (${comp.diffPercent}%)</span>`;
+    } else if (comp && comp.status === 'EQUAL') {
+      compPill = `<span class="etalase-comp-pill comp-equal" title="${escapeHtml(comp.desc)}"><span>▬</span> Harga Stabil (0%)</span>`;
+    } else {
+      compPill = `<span class="etalase-comp-pill comp-new" title="${escapeHtml(comp.desc)}"><span>✨</span> Produk Baru</span>`;
+    }
+
     return `
       <div class="etalase-card" data-id="${escapeHtml(prod.id)}">
         <div class="etalase-art-wrap" style="background: ${prod.bgGradient || 'linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02))'};">
@@ -3120,7 +3303,11 @@ function renderEtalaseGrid() {
             </button>
           </div>
 
-          <button type="button" class="btn-add-cart-etalase" onclick="addProductToCart('${escapeHtml(prod.id)}')">
+          <div style="margin: 4px 0 6px;">
+            ${compPill}
+          </div>
+
+          <button type="button" class="btn-add-cart-etalase" id="btn-add-etalase-${escapeHtml(prod.id)}" onclick="addProductToCart('${escapeHtml(prod.id)}')">
             <i data-lucide="shopping-cart" style="width:13px; height:13px;"></i>
             <span>+ Troli</span>
           </button>
@@ -3141,11 +3328,11 @@ function addProductToCart(productId) {
     cartManager = new CartManager();
   }
 
-  cartManager.addItem({
+  const addedItem = cartManager.addItem({
     name: prod.name,
     category: prod.category || 'Bahan Pokok',
     unit: prod.unit || 'pcs',
-    quantity: 1,
+    qty: 1,
     originalPrice: Number(prod.price) || 0,
     discountString: '0'
   });
@@ -3175,7 +3362,56 @@ function addProductToCart(productId) {
     switchTroliCount.textContent = totals.totalItemsCount;
   }
 
-  showToast(`"${prod.name}" berhasil masuk ke Troli!`, '🛒');
+  // Visual button feedback
+  const addBtn = document.getElementById(`btn-add-etalase-${productId}`);
+  if (addBtn) {
+    const originalText = addBtn.innerHTML;
+    addBtn.innerHTML = `<span>✓ Masuk</span>`;
+    addBtn.style.background = '#10b981';
+    addBtn.style.color = '#ffffff';
+    setTimeout(() => {
+      addBtn.innerHTML = originalText;
+      addBtn.style.background = '';
+      addBtn.style.color = '';
+      refreshLucideIcons();
+    }, 1000);
+  }
+
+  // Toast feedback with explicit comparison result vs last month
+  const comp = addedItem && addedItem.comparison ? addedItem.comparison : compareWithStoreHistory(cartManager.getStoreName(), prod.name, prod.price);
+  if (comp && comp.status === 'UP') {
+    showToast(`"${prod.name}" masuk Troli! 🔺 Naik +${CurrencyUtils.formatRupiah(comp.diff)} vs bulan lalu`, '📈');
+  } else if (comp && comp.status === 'DOWN') {
+    showToast(`"${prod.name}" masuk Troli! 🟢 Lebih hemat -${CurrencyUtils.formatRupiah(Math.abs(comp.diff))} vs bulan lalu`, '🏷️');
+  } else if (comp && comp.status === 'EQUAL') {
+    showToast(`"${prod.name}" masuk Troli! ⚖️ Harga Stabil vs bulan lalu`, '✨');
+  } else {
+    showToast(`"${prod.name}" berhasil masuk ke Troli!`, '🛒');
+  }
+}
+
+function updateEditPriceModalComparison() {
+  const compContainer = document.getElementById('etalase-edit-price-comparator');
+  const compIcon = document.getElementById('etalase-edit-comparator-icon');
+  const compText = document.getElementById('etalase-edit-comparator-text');
+  const inputEl = document.getElementById('input-edit-etalase-price');
+  if (!compContainer || !inputEl || !currentEditingProductId) return;
+
+  const products = getEtalaseProducts();
+  const prod = products.find(p => p.id === currentEditingProductId);
+  if (!prod) return;
+
+  const newPrice = Math.max(100, parseInt(inputEl.value, 10) || 0);
+  const comp = compareWithStoreHistory(cartManager ? cartManager.getStoreName() : 'Lotte Mart Grocery - Puri Indah', prod.name, newPrice);
+
+  if (comp && comp.status !== 'NONE') {
+    compContainer.style.display = 'flex';
+    compContainer.className = `modal-comparator-preview ${comp.badgeClass}`;
+    if (compIcon) compIcon.textContent = comp.symbol || '🔍';
+    if (compText) compText.innerHTML = `<strong>${escapeHtml(comp.label)}</strong> (${escapeHtml(comp.diffFormatted)}): ${escapeHtml(comp.desc)}`;
+  } else {
+    compContainer.style.display = 'none';
+  }
 }
 
 function openEditPriceModal(productId) {
@@ -3199,6 +3435,8 @@ function openEditPriceModal(productId) {
       inputEl.select();
     }, 100);
   }
+
+  updateEditPriceModalComparison();
 
   if (modal) {
     modal.classList.add('open', 'active');
@@ -3328,6 +3566,10 @@ function initEtalase() {
 
   // Quick adjust price chips in Edit Modal
   const editPriceInput = document.getElementById('input-edit-etalase-price');
+  if (editPriceInput) {
+    editPriceInput.addEventListener('input', updateEditPriceModalComparison);
+  }
+
   document.querySelectorAll('.quick-adjust-price-chip').forEach(chip => {
     chip.addEventListener('click', () => {
       const delta = parseInt(chip.getAttribute('data-delta'), 10) || 0;
@@ -3335,9 +3577,13 @@ function initEtalase() {
         let current = parseInt(editPriceInput.value, 10) || 0;
         current = Math.max(100, current + delta);
         editPriceInput.value = current;
+        updateEditPriceModalComparison();
       }
     });
   });
+
+  window.showTroliTab = showTroliTab;
+  window.showEtalaseTab = showEtalaseTab;
 
   const btnSavePrice = document.getElementById('btn-save-etalase-price') || document.getElementById('btn-save-edit-price');
   if (btnSavePrice) {

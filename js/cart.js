@@ -123,29 +123,36 @@ export function compareWithStoreHistory(storeName, productName, currentPrice) {
     return {
       status: 'NEW',
       symbol: '✨',
+      iconEmoji: '✨',
       badgeClass: 'badge-new',
+      statusClass: 'status-new',
       label: 'Produk Baru',
-      desc: 'Belum ada riwayat di toko ini',
+      title: 'Produk Baru',
+      desc: `Belum ada riwayat di toko ${storeName || 'ini'}`,
       diff: 0,
       diffPercent: 0,
+      diffFormatted: 'Baru',
       historicalPrice: 0,
-      historicalDate: null
+      historicalDate: null,
+      inSameStore: false
     };
   }
 
   const prevPrice = hist.price;
   const diff = numPrice - prevPrice;
   const diffPercent = prevPrice > 0 ? Math.round(((diff / prevPrice) * 100) * 10) / 10 : 0;
-  const formattedDate = hist.date ? new Date(hist.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : 'riwayat lalu';
-
   const periodLabel = hist.inSameStore ? 'bulan lalu' : (hist.storeName || 'toko lain');
 
   if (diff > 0) {
     return {
       status: 'UP',
       symbol: '\u2191',
+      iconEmoji: '🔺',
       badgeClass: 'badge-price-up',
-      label: `+${CurrencyUtils.formatRupiah(diff)}`,
+      statusClass: 'status-up',
+      label: 'Harga Naik',
+      title: 'Harga Naik',
+      diffFormatted: `+${CurrencyUtils.formatRupiah(diff)} (+${diffPercent}%)`,
       desc: `Naik dibanding ${periodLabel} (${CurrencyUtils.formatRupiah(prevPrice)})`,
       diff: diff,
       diffPercent: diffPercent,
@@ -158,8 +165,12 @@ export function compareWithStoreHistory(storeName, productName, currentPrice) {
     return {
       status: 'DOWN',
       symbol: '\u2193',
+      iconEmoji: '🟢',
       badgeClass: 'badge-price-down',
-      label: `-${CurrencyUtils.formatRupiah(Math.abs(diff))}`,
+      statusClass: 'status-down',
+      label: 'Harga Turun',
+      title: 'Harga Turun',
+      diffFormatted: `-${CurrencyUtils.formatRupiah(Math.abs(diff))} (${diffPercent}%)`,
       desc: `PROMO! Lebih hemat vs ${periodLabel} (${CurrencyUtils.formatRupiah(prevPrice)})`,
       diff: diff,
       diffPercent: diffPercent,
@@ -171,9 +182,13 @@ export function compareWithStoreHistory(storeName, productName, currentPrice) {
   } else {
     return {
       status: 'EQUAL',
-      symbol: '=',
+      symbol: '▬',
+      iconEmoji: '⚖️',
       badgeClass: 'badge-price-equal',
-      label: 'Harga Tetap Stabil',
+      statusClass: 'status-equal',
+      label: 'Harga Stabil',
+      title: 'Harga Stabil',
+      diffFormatted: 'Stabil (0%)',
       desc: `Sama persis dengan ${periodLabel} (${CurrencyUtils.formatRupiah(prevPrice)})`,
       diff: 0,
       diffPercent: 0,

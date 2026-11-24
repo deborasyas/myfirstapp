@@ -106,12 +106,24 @@ export const SEED_ACTIVE_CART = [
     name: 'Minyak Goreng Tropical 2L',
     category: 'Bahan Pokok',
     unit: 'liter',
-    qty: 2,
-    originalPrice: 38000,
-    discountString: '50% + 20%', // Demonstrating multi-tier discount F-03
-    finalUnitPrice: 15200,
-    subtotal: 30400,
-    discountSavings: 45600
+    qty: 1, // F-02 Scenario: Ubah Qty dari 1 ke 3 -> Subtotal seketika Rp 129.000 (3 x Rp 43.000)
+    originalPrice: 43000,
+    discountString: '0',
+    finalUnitPrice: 43000,
+    subtotal: 43000,
+    discountSavings: 0
+  },
+  {
+    id: 'cart-5',
+    name: 'Wajan Anti Lengket 24cm',
+    category: 'Bumbu & Dapur',
+    unit: 'pcs',
+    qty: 1,
+    originalPrice: 100000,
+    discountString: '50% + 20%', // F-03 Diskon Bertingkat: 100.000 -> 50.000 -> 40.000 (Tepat Rp 40.000)
+    finalUnitPrice: 40000,
+    subtotal: 40000,
+    discountSavings: 60000
   }
 ];
 
@@ -120,7 +132,8 @@ export const QUICK_PRODUCTS = [
   { name: 'Beras 5kg', category: 'Bahan Pokok', unit: 'pack', defaultPrice: 74000 },
   { name: 'Telur 1kg', category: 'Bahan Pokok', unit: 'kg', defaultPrice: 28000 },
   { name: 'Garam 500g', category: 'Bumbu & Dapur', unit: 'pack', defaultPrice: 5000 },
-  { name: 'Minyak Goreng Tropical 2L', category: 'Bahan Pokok', unit: 'liter', defaultPrice: 34000 },
+  { name: 'Minyak Goreng Tropical 2L', category: 'Bahan Pokok', unit: 'liter', defaultPrice: 43000 },
+  { name: 'Wajan Promo Anti Lengket', category: 'Bumbu & Dapur', unit: 'pcs', defaultPrice: 100000 },
   { name: 'Indomie Goreng Special', category: 'Makanan Cepat Saji', unit: 'dus', defaultPrice: 115000 },
   { name: 'Ultra Milk Cokelat 1L', category: 'Minuman', unit: 'pcs', defaultPrice: 19500 },
   { name: 'Fiesta Chicken Nugget 500g', category: 'Makanan Cepat Saji', unit: 'pack', defaultPrice: 45000 },
@@ -305,6 +318,54 @@ export const StorageService = {
   },
 
   /**
+   * Helper function for intelligent grocery product name matching.
+   * Handles exact match, substrings, and token overlap (e.g. "Beras 5kg" vs "Beras Ramos Super 5kg").
+   */
+  matchProductNames(query, targetName) {
+    if (!query || !targetName) return false;
+    const q = query.trim().toLowerCase();
+    const t = targetName.trim().toLowerCase();
+    if (q === t) return true;
+    if (q.includes(t) || t.includes(q)) return true;
+
+    // Clean strings by removing brackets, punctuation
+    const clean = s => s.replace(/[\(\)\[\],\.\-\/]/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
+    const cq = clean(q);
+    const ct = clean(t);
+    if (cq === ct || cq.includes(ct) || ct.includes(cq)) return true;
+
+    const qTokens = cq.split(' ').filter(w => w.length > 1);
+    const tTokens = ct.split(' ').filter(w => w.length > 1);
+
+    // If one is subset of another
+    const isSubset = (sub, sup) => sub.every(tok => sup.some(st => st === tok || st.includes(tok) || tok.includes(st)));
+    if (isSubset(tTokens, qTokens) || isSubset(qTokens, tTokens)) return true;
+
+    // Key grocery nouns matching
+    const keyNouns = [
+      'beras', 'minyak', 'telur', 'ayam', 'susu', 'mie', 'indomie',
+      'garam', 'gula', 'kopi', 'teh', 'sabun', 'deterjen', 'rinso',
+      'sunlight', 'lifebuoy', 'pepsodent', 'chitato', 'oreo', 'roti',
+      'bawang', 'bayam', 'wortel', 'pisang'
+    ];
+    for (const noun of keyNouns) {
+      if (qTokens.includes(noun) && tTokens.includes(noun)) {
+        const qNum = q.match(/\d+(\s*)(kg|g|gr|l|liter|ml|pcs|pack|dus)/i);
+        const tNum = t.match(/\d+(\s*)(kg|g|gr|l|liter|ml|pcs|pack|dus)/i);
+        if (qNum && tNum) {
+          const qSize = qNum[0].replace(/\s+/g, '').toLowerCase();
+          const tSize = tNum[0].replace(/\s+/g, '').toLowerCase();
+          if (qSize === tSize) return true;
+        } else {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  },
+
+  /**
    * Price history lookup function for F-04:
    * Finds the most recent recorded price for a given product at a specific store.
    * Matches product name case-insensitively and intelligently.
@@ -318,8 +379,7 @@ export const StorageService = {
     for (const session of history) {
       if (session.storeName && session.storeName.toLowerCase() === storeName.toLowerCase()) {
         const matchedItem = session.items?.find(it => {
-          const itName = it.name.trim().toLowerCase();
-          return itName === cleanQuery || itName.includes(cleanQuery) || cleanQuery.includes(itName);
+          return this.matchProductNames(cleanQuery, it.name);
         });
         if (matchedItem) {
           return {
@@ -340,8 +400,7 @@ export const StorageService = {
     // 2. If not found in current store, check any other store for cross-store comparison!
     for (const session of history) {
       const matchedItem = session.items?.find(it => {
-        const itName = it.name.trim().toLowerCase();
-        return itName === cleanQuery || itName.includes(cleanQuery) || cleanQuery.includes(itName);
+        return this.matchProductNames(cleanQuery, it.name);
       });
       if (matchedItem) {
         return {
