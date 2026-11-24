@@ -24,8 +24,69 @@ const MIME_TYPES = {
   '.webmanifest': 'application/manifest+json'
 };
 
+let sseClients = [];
+let latestTrolleyPayload = null;
+
 const server = http.createServer((req, res) => {
   let reqUrl = req.url.split('?')[0];
+
+  // CORS Preflight
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204, {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type'
+    });
+    res.end();
+    return;
+  }
+
+  // Realtime Multi-Device Sync API (HP <-> PC Instant Bridge)
+  if (reqUrl === '/api/sync-trolley/stream') {
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache, no-transform',
+      'Connection': 'keep-alive',
+      'Access-Control-Allow-Origin': '*'
+    });
+    res.write(': connected\n\n');
+    if (latestTrolleyPayload) {
+      res.write(`data: ${JSON.stringify(latestTrolleyPayload)}\n\n`);
+    }
+    sseClients.push(res);
+    req.on('close', () => {
+      sseClients = sseClients.filter(c => c !== res);
+    });
+    return;
+  }
+
+  if (reqUrl === '/api/sync-trolley') {
+    if (req.method === 'POST') {
+      let body = '';
+      req.on('data', chunk => { body += chunk; });
+      req.on('end', () => {
+        try {
+          const payload = JSON.parse(body);
+          latestTrolleyPayload = payload;
+          const msg = `data: ${JSON.stringify(payload)}\n\n`;
+          sseClients.forEach(client => {
+            try { client.write(msg); } catch (e) { }
+          });
+          res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+          res.end(JSON.stringify({ success: true, clients: sseClients.length }));
+        } catch (err) {
+          res.writeHead(400, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+          res.end(JSON.stringify({ error: 'Invalid JSON' }));
+        }
+      });
+      return;
+    } else if (req.method === 'GET') {
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+      res.end(JSON.stringify(latestTrolleyPayload || { items: [] }));
+      return;
+    }
+  }
+
   if (reqUrl === '/' || reqUrl === '') {
     reqUrl = '/index.html';
   }

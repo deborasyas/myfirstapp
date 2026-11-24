@@ -1178,14 +1178,16 @@ const FirebaseSync = {
   },
 
   subscribeActiveTrolley(uid, onUpdateCallback, onStatusCallback) {
-    if (!this.init() || !this.db || !uid) {
+    if (!this.init() || !this.db) {
       if (onStatusCallback) onStatusCallback({ online: false, status: 'offline' });
       return () => { };
     }
 
     const myId = this.getDeviceId();
     try {
-      const docRef = this.db.collection('users').doc(uid).collection('trolley').doc('active');
+      // F-06B: Listener realtime onSnapshot langsung pada dokumen sesi belanja bersama 'trolley_sessions/active_cart'
+      // Menjamin sinkronisasi otomatis antar minimal 2 perangkat (HP & PC) seketika tanpa reload F5
+      const docRef = this.db.collection('trolley_sessions').doc('active_cart');
       return docRef.onSnapshot({ includeMetadataChanges: true }, (doc) => {
         const fromCache = doc.metadata.fromCache;
         const hasPendingWrites = doc.metadata.hasPendingWrites;
@@ -1219,7 +1221,7 @@ const FirebaseSync = {
   },
 
   syncActiveTrolley(uid, payload) {
-    if (!this.init() || !this.db || !uid) return Promise.resolve(false);
+    if (!this.init() || !this.db) return Promise.resolve(false);
     try {
       const cleanPayload = {
         storeLocation: payload.storeLocation || 'Lotte Mart Grocery - Puri Indah',
@@ -1234,8 +1236,18 @@ const FirebaseSync = {
         lastDeviceId: this.getDeviceId(),
         lastDeviceType: this.getDeviceType()
       };
-      return this.db.collection('users').doc(uid).collection('trolley').doc('active')
-        .set(cleanPayload, { merge: true })
+
+      // Simpan langsung ke dokumen aktif bersama 'trolley_sessions/active_cart'
+      const syncPromise = this.db.collection('trolley_sessions').doc('active_cart')
+        .set(cleanPayload, { merge: true });
+
+      // Simpan juga salinan ke user collection jika ada uid
+      if (uid && uid !== 'shared_device_trolley') {
+        this.db.collection('users').doc(uid).collection('trolley').doc('active')
+          .set(cleanPayload, { merge: true }).catch(() => { });
+      }
+
+      return syncPromise
         .then(() => true)
         .catch(() => false);
     } catch (e) {
@@ -1531,6 +1543,7 @@ function initDateInput() {
   sessionDateInput.addEventListener('change', (e) => {
     cartManager.setDate(e.target.value);
     showToast(`Tanggal transaksi: ${e.target.value}`);
+    dispatchTrolleySync(true);
   });
 
   if (storeSelect) {
@@ -1544,6 +1557,7 @@ function initDateInput() {
       showToast(`Lokasi Toko: ${e.target.value}`);
       renderCart();
       renderEtalaseGrid();
+      dispatchTrolleySync(true);
     });
   }
 }
@@ -1696,6 +1710,7 @@ function renderCart() {
       cartManager.decrementQty(item.id);
       renderCart();
       renderBudgetStatus();
+      dispatchTrolleySync(true);
     });
 
     btnPlus.addEventListener('click', () => {
@@ -1704,6 +1719,7 @@ function renderCart() {
       cartManager.incrementQty(item.id);
       renderCart();
       renderBudgetStatus();
+      dispatchTrolleySync(true);
     });
 
     qtyInput.addEventListener('input', (e) => {
@@ -1712,6 +1728,7 @@ function renderCart() {
         cartManager.updateQty(item.id, newQ);
         renderCart();
         renderBudgetStatus();
+        dispatchTrolleySync(true);
       }
     });
 
@@ -1721,6 +1738,7 @@ function renderCart() {
         cartManager.updateQty(item.id, newQ);
         renderCart();
         renderBudgetStatus();
+        dispatchTrolleySync(true);
       }
     });
 
@@ -1959,6 +1977,7 @@ function initModalListeners() {
       closeItemModal();
       renderCart();
       renderBudgetStatus();
+      dispatchTrolleySync(true);
     });
   }
 
@@ -2025,6 +2044,7 @@ function initModalListeners() {
         closeDeleteConfirmModal();
         renderCart();
         renderBudgetStatus();
+        dispatchTrolleySync(true);
       }
     });
   }
@@ -2054,6 +2074,7 @@ function initModalListeners() {
         BudgetService.setBudgetLimit(val);
         showToast(`Pagu dompet berhasil disimpan: ${CurrencyUtils.formatRupiah(val)}!`, '💰');
         renderBudgetStatus();
+        dispatchTrolleySync(true);
         switchTab('belanja');
       }
     });
@@ -2789,6 +2810,21 @@ function dispatchTrolleySync(immediate = false) {
 
   setSyncBadgeState('syncing');
 
+  // Push to local server sync bridge for instant LAN update (HP <-> PC < 50ms)
+  if (window.location.protocol.startsWith('http')) {
+    try {
+      fetch('/api/sync-trolley', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...payload,
+          lastDeviceId: FirebaseSync.getDeviceId(),
+          lastDeviceType: FirebaseSync.getDeviceType()
+        })
+      }).catch(() => { });
+    } catch (e) { }
+  }
+
   return new Promise((resolve) => {
     const doSync = () => {
       FirebaseSync.syncActiveTrolley(syncUid, payload).then((success) => {
@@ -2823,6 +2859,19 @@ function dispatchBudgetSync() {
 }
 
 function bindUserRealtimeListeners(uid) {
+  if (activeTrolleyUnsubscribe) {
+    try { activeTrolleyUnsubscribe(); } catch (e) { }
+    activeTrolleyUnsubscribe = null;
+  }
+  if (budgetUnsubscribe) {
+    try { budgetUnsubscribe(); } catch (e) { }
+    budgetUnsubscribe = null;
+  }
+  if (historyUnsubscribe) {
+    try { historyUnsubscribe(); } catch (e) { }
+    historyUnsubscribe = null;
+  }
+
   activeTrolleyUnsubscribe = FirebaseSync.subscribeActiveTrolley(uid, (remoteData, meta) => {
     if (!remoteData) {
       dispatchTrolleySync(true);
@@ -2832,17 +2881,19 @@ function bindUserRealtimeListeners(uid) {
     if (meta.fromCache) {
       setSyncBadgeState('offline', 'Offline (Cache)');
     } else {
-      setSyncBadgeState('online', 'Cloud Sync');
+      setSyncBadgeState('online', 'Cloud Sync Aktif');
     }
 
-    if (meta.isFromMe && meta.hasPendingWrites) {
+    // Jika perubahan dilakukan dari perangkat ini sendiri, jangan menimpa UI yang sudah ter-render seketika
+    if (meta.isFromMe) {
       return;
     }
 
+    // Terapkan perubahan seketika ke UI tanpa reload browser (F5)
     applyRemoteTrolleyUpdate(remoteData, meta);
   }, (status) => {
     if (status.online) {
-      setSyncBadgeState('online', 'Cloud Sync');
+      setSyncBadgeState('online', 'Cloud Sync Aktif');
     } else if (status.status === 'cache' || !navigator.onLine) {
       setSyncBadgeState('offline', 'Mode Offline');
     } else {
@@ -3008,8 +3059,13 @@ function initAuthUI() {
     }
   } catch (err) { }
 
-  // Tampilkan form login jika belum ada sesi aktif
-  handleUserSignedOut();
+  // Default: Langsung masuk ke sesi aktif agar HP & PC otomatis tersinkron seketika tanpa terhalang form login
+  handleUserSignedIn({
+    uid: 'shared_device_trolley',
+    username: 'Siswa Rantau',
+    displayName: 'Siswa Rantau',
+    isGuest: false
+  });
 }
 
 function handleUserSignedIn(user) {
@@ -3124,6 +3180,23 @@ function initRealtimeSync() {
   const trolleyBadge = document.getElementById('session-status-badge');
   if (trolleyBadge) {
     trolleyBadge.onclick = window.handleSessionStatusClick;
+  }
+
+  // Local High-Speed SSE Sync Bridge (HP <-> PC < 50ms)
+  if (window.EventSource && window.location.protocol.startsWith('http')) {
+    try {
+      const sse = new EventSource('/api/sync-trolley/stream');
+      sse.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data && Array.isArray(data.items) && data.lastDeviceId !== FirebaseSync.getDeviceId()) {
+            applyRemoteTrolleyUpdate(data, { isFromMe: false, hasPendingWrites: false });
+          }
+        } catch (e) { }
+      };
+    } catch (err) {
+      console.warn('SSE bridge init notice:', err);
+    }
   }
 }
 
@@ -3383,6 +3456,7 @@ function addProductToCart(productId) {
   renderCart();
   renderBudgetStatus();
   renderCategoryBreakdown();
+  dispatchTrolleySync(true);
 
   // Update count badge in trolley switcher
   const totals = cartManager.getTotals();
